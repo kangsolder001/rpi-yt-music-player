@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   Sparkles,
+  ListMusic,
 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { api } from '../../services/api';
@@ -28,6 +29,7 @@ interface MobileFullPlayerProps {
   playerState: PlayerState;
   onAddToPlaylist?: () => void;
   onOpenEqualizer?: () => void;
+  onOpenQueue?: () => void;
 }
 
 export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
@@ -36,6 +38,7 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
   playerState,
   onAddToPlaylist,
   onOpenEqualizer,
+  onOpenQueue,
 }) => {
   if (!isOpen) return null;
 
@@ -120,6 +123,21 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
         </div>
 
         <div className="flex items-center gap-1">
+          {onOpenQueue && (
+            <button
+              onClick={onOpenQueue}
+              className="relative p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-800/40 active:scale-95 transition"
+              title="Antrean Lagu Berikutnya (Up Next)"
+            >
+              <ListMusic className="w-5 h-5" />
+              {playerState.queue_length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center">
+                  {playerState.queue_length}
+                </span>
+              )}
+            </button>
+          )}
+
           {onOpenEqualizer && (
             <button
               onClick={onOpenEqualizer}

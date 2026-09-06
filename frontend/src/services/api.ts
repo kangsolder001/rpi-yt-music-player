@@ -1,4 +1,4 @@
-import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand, RecommendationResponse } from '../types/player';
+import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand, RecommendationResponse, QueueResponse } from '../types/player';
 import { PlaylistDetail, PlaylistSummary, CreatePlaylistInput, AddSongInput, PlaylistSong } from '../types/playlist';
 
 const BASE_URL = '/api';
@@ -90,6 +90,20 @@ export const api = {
       body: JSON.stringify({ enabled }),
     });
     if (!res.ok) throw new Error('Failed to set autoplay mode');
+    return res.json();
+  },
+
+  async getQueue(): Promise<QueueResponse> {
+    const res = await fetch(`${BASE_URL}/player/queue`);
+    if (!res.ok) throw new Error('Failed to fetch player queue');
+    return res.json();
+  },
+
+  async playQueueIndex(index: number): Promise<PlayerState> {
+    const res = await fetch(`${BASE_URL}/player/queue/play/${index}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to play queue track');
     return res.json();
   },
 

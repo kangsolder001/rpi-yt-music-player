@@ -447,6 +447,41 @@ class MPVPlayerService:
             queue_length=len(self._queue)
         )
 
+    def get_queue(self) -> Dict[str, Any]:
+        """Get the current playback queue with current item indicator."""
+        items = []
+        for i, item in enumerate(self._queue):
+            items.append({
+                "index": i,
+                "video_id": item.get("video_id", ""),
+                "title": item.get("title", "Unknown Title"),
+                "artist": item.get("artist", "Unknown Artist"),
+                "thumbnail_url": item.get("thumbnail_url"),
+                "duration": float(item.get("duration", 0)),
+                "is_current": (i == self._queue_index)
+            })
+        return {
+            "current_index": self._queue_index,
+            "total": len(self._queue),
+            "items": items
+        }
+
+    def play_queue_index(self, index: int):
+        """Play a specific track in the existing queue by its index."""
+        if not self._queue or index < 0 or index >= len(self._queue):
+            return
+        self._queue_index = index
+        song = self._queue[self._queue_index]
+        self.play_song(
+            video_id=song["video_id"],
+            title=song.get("title", ""),
+            artist=song.get("artist", ""),
+            thumbnail_url=song.get("thumbnail_url"),
+            duration=song.get("duration", 0),
+            playlist_id=self._current_playlist_id,
+            reset_queue=False
+        )
+
     def shutdown(self):
         """Terminate MPV daemon."""
         if self.process and self.process.poll() is None:

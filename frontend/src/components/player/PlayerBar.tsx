@@ -1,4 +1,4 @@
-import { Music, Disc3, SlidersHorizontal } from 'lucide-react';
+import { Music, Disc3, SlidersHorizontal, ListMusic } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { Controls } from './Controls';
 import { ProgressBar } from './ProgressBar';
@@ -8,9 +8,10 @@ interface PlayerBarProps {
   playerState: PlayerState;
   onOpenEqualizer?: () => void;
   onOpenVolume?: () => void;
+  onOpenQueue?: () => void;
 }
 
-export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer, onOpenVolume }) => {
+export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer, onOpenVolume, onOpenQueue }) => {
   const currentTrack = playerState.current_track;
   const hasTrack = Boolean(currentTrack && currentTrack.video_id);
 
@@ -64,6 +65,20 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualiz
 
       {/* Hardware Volume & Equalizer (Right) */}
       <div className="flex items-center justify-end gap-2.5 w-1/4">
+        {onOpenQueue && (
+          <button
+            onClick={onOpenQueue}
+            className="relative p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition active:scale-95"
+            title="Antrean Lagu Berikutnya (Up Next)"
+          >
+            <ListMusic className="w-4 h-4" />
+            {playerState.queue_length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                {playerState.queue_length}
+              </span>
+            )}
+          </button>
+        )}
         {onOpenEqualizer && (
           <button
             onClick={onOpenEqualizer}

@@ -63,3 +63,19 @@ export interface RecommendationResponse {
   categories: RecommendationCategory[];
 }
 
+export interface QueueItem {
+  index: number;
+  video_id: string;
+  title: string;
+  artist?: string;
+  thumbnail_url?: string | null;
+  duration: number;
+  is_current: boolean;
+}
+
+export interface QueueResponse {
+  current_index: number;
+  total: number;
+  items: QueueItem[];
+}
+

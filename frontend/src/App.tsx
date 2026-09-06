@@ -17,6 +17,7 @@ import { MiniPlayer } from './components/player/MiniPlayer';
 import { MobileFullPlayer } from './components/player/MobileFullPlayer';
 import { MobileVolumeModal } from './components/player/MobileVolumeModal';
 import { EqualizerModal } from './components/player/EqualizerModal';
+import { QueueModal } from './components/player/QueueModal';
 import { BottomNav } from './components/navigation/BottomNav';
 
 export const App: React.FC = () => {
@@ -41,6 +42,7 @@ export const App: React.FC = () => {
   const [isMobileFullPlayerOpen, setIsMobileFullPlayerOpen] = useState(false);
   const [isMobileVolumeOpen, setIsMobileVolumeOpen] = useState(false);
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
 
   // Playlists state
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
@@ -412,6 +414,7 @@ export const App: React.FC = () => {
         playerState={playerState}
         onOpenEqualizer={() => setIsEqualizerOpen(true)}
         onOpenVolume={() => setIsMobileVolumeOpen(true)}
+        onOpenQueue={() => setIsQueueOpen(true)}
       />
 
       {/* Mobile Floating Mini Player (Visible above BottomNav when track exists) */}
@@ -439,6 +442,7 @@ export const App: React.FC = () => {
         onClose={() => setIsMobileFullPlayerOpen(false)}
         playerState={playerState}
         onOpenEqualizer={() => setIsEqualizerOpen(true)}
+        onOpenQueue={() => setIsQueueOpen(true)}
         onAddToPlaylist={() => {
           if (playerState.current_track?.video_id) {
             setSongToAddToPlaylist({
@@ -458,6 +462,13 @@ export const App: React.FC = () => {
         isOpen={isMobileVolumeOpen}
         onClose={() => setIsMobileVolumeOpen(false)}
         volume={playerState.volume}
+      />
+
+      {/* Up Next / Play Queue Modal */}
+      <QueueModal
+        isOpen={isQueueOpen}
+        onClose={() => setIsQueueOpen(false)}
+        playerState={playerState}
       />
 
       {/* Equalizer & Audio Enhancer Modal */}

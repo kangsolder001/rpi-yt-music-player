@@ -4,7 +4,7 @@ from backend.app.database import get_db
 from backend.app.models import Playlist, PlaylistSong
 from backend.app.schemas import (
     PlayerState, PlaySongRequest, VolumeRequest, SeekRequest, RepeatRequest,
-    AutoplayRequest, EqualizerUpdateRequest, EqualizerPresetRequest
+    AutoplayRequest, QueueResponse, EqualizerUpdateRequest, EqualizerPresetRequest
 )
 from backend.app.services.mpv_player import player_service
 from backend.app.services.audio_mixer import audio_mixer
@@ -124,6 +124,18 @@ async def set_repeat_mode(req: RepeatRequest):
 async def set_autoplay(req: AutoplayRequest):
     """Enable or disable autoplay of similar recommended tracks."""
     player_service.set_autoplay(req.enabled)
+    await ws_manager.broadcast_state()
+    return player_service.get_state()
+
+@router.get("/queue", response_model=QueueResponse)
+def get_player_queue():
+    """Get current playback queue and current track index."""
+    return player_service.get_queue()
+
+@router.post("/queue/play/{index}", response_model=PlayerState)
+async def play_queue_index(index: int):
+    """Skip directly to a specific track index in queue."""
+    player_service.play_queue_index(index)
     await ws_manager.broadcast_state()
     return player_service.get_state()
 

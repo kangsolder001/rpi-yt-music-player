@@ -115,3 +115,18 @@ class EqualizerUpdateRequest(BaseModel):
 class EqualizerPresetRequest(BaseModel):
     preset: str
 
+# --- Queue Schemas ---
+class QueueItem(BaseModel):
+    index: int
+    video_id: str
+    title: str
+    artist: Optional[str] = "Unknown Artist"
+    thumbnail_url: Optional[str] = None
+    duration: float = 0.0
+    is_current: bool = False
+
+class QueueResponse(BaseModel):
+    current_index: int
+    total: int
+    items: List[QueueItem]
+
