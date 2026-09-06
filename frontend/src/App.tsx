@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, Sparkles, Menu, X, Plus } from 'lucide-react';
+import { Radio, Sparkles, Plus, Compass, ListMusic } from 'lucide-react';
 import { PlayerState, SearchResult } from './types/player';
 import { PlaylistDetail as PlaylistDetailType, PlaylistSummary } from './types/playlist';
 import { api } from './services/api';
@@ -7,10 +7,15 @@ import { playerWs } from './services/websocket';
 
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { PlaylistDetail } from './components/playlist/PlaylistDetail';
+import { MobilePlaylistDirectory } from './components/playlist/MobilePlaylistDirectory';
 import { AddToPlaylistModal } from './components/playlist/AddToPlaylistModal';
 import { SearchBar } from './components/search/SearchBar';
 import { SearchResults } from './components/search/SearchResults';
 import { PlayerBar } from './components/player/PlayerBar';
+import { MiniPlayer } from './components/player/MiniPlayer';
+import { MobileFullPlayer } from './components/player/MobileFullPlayer';
+import { MobileVolumeModal } from './components/player/MobileVolumeModal';
+import { BottomNav } from './components/navigation/BottomNav';
 
 export const App: React.FC = () => {
   // Player state
@@ -29,7 +34,10 @@ export const App: React.FC = () => {
 
   // Views & Navigation
   const [currentView, setCurrentView] = useState<'explore' | 'playlist'>('explore');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Mobile Modals
+  const [isMobileFullPlayerOpen, setIsMobileFullPlayerOpen] = useState(false);
+  const [isMobileVolumeOpen, setIsMobileVolumeOpen] = useState(false);
 
   // Playlists state
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
@@ -74,7 +82,8 @@ export const App: React.FC = () => {
     try {
       const list = await api.getPlaylists();
       setPlaylists(list);
-      if (list.length > 0 && selectedPlaylistId === null) {
+      // Auto-select on desktop if nothing selected yet
+      if (list.length > 0 && selectedPlaylistId === null && window.innerWidth >= 768) {
         setSelectedPlaylistId(list[0].id);
       }
     } catch (e) {
@@ -119,7 +128,6 @@ export const App: React.FC = () => {
       if (selectedPlaylistId === id) {
         setSelectedPlaylistId(null);
         setCurrentPlaylistDetail(null);
-        setCurrentView('explore');
       }
     } catch (e) {
       console.error(e);
@@ -140,10 +148,11 @@ export const App: React.FC = () => {
     }
   };
 
-  const handlePlayAllInPlaylist = async () => {
-    if (!selectedPlaylistId) return;
+  const handlePlayAllInPlaylist = async (playlistId?: number) => {
+    const targetId = playlistId || selectedPlaylistId;
+    if (!targetId) return;
     try {
-      await api.playPlaylist(selectedPlaylistId, 0);
+      await api.playPlaylist(targetId, 0);
     } catch (e) {
       console.error(e);
     }
@@ -209,25 +218,20 @@ export const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [selectedPlaylistId, currentPlaylistDetail]);
 
+  const hasTrack = Boolean(playerState.current_track && playerState.current_track.video_id);
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans select-none">
       
       {/* Top Header */}
-      <header className="h-16 border-b border-zinc-800 flex items-center justify-between px-4 sm:px-6 bg-zinc-900/50 backdrop-blur shrink-0 gap-4 z-20">
+      <header className="h-16 border-b border-zinc-800/80 flex items-center justify-between px-4 sm:px-6 bg-zinc-900/60 backdrop-blur shrink-0 gap-4 z-20">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-zinc-400 hover:text-zinc-100 rounded-lg hover:bg-zinc-800"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-red-600 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-red-600/30">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-red-600/30 shrink-0">
             <Radio className="w-5 h-5" />
           </div>
 
           <div>
-            <h1 className="font-bold text-sm sm:text-base leading-tight tracking-tight">
+            <h1 className="font-extrabold text-base sm:text-lg leading-tight tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-zinc-100 to-zinc-400">
               RPi Music Box
             </h1>
             <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
@@ -237,24 +241,26 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Global Search Bar */}
-        <div className="flex-1 max-w-xl mx-2 hidden sm:block">
+        {/* Global Search Bar (Desktop) */}
+        <div className="flex-1 max-w-xl mx-4 hidden md:block">
           <SearchBar onSearch={handleSearch} isLoading={isSearching} />
         </div>
 
-        {/* Status badges */}
-        <div className="flex items-center gap-2 text-xs">
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setSongToAddToPlaylist(null);
               setIsAddModalOpen(true);
             }}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl transition text-xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 rounded-xl transition text-xs font-semibold shadow-sm"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Link YT</span>
+            <Plus className="w-4 h-4 text-red-400" />
+            <span className="hidden xs:inline">+ Link YouTube</span>
+            <span className="xs:hidden">+ Link</span>
           </button>
-          <span className="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[11px]">
+          
+          <span className="hidden sm:inline-block px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[11px]">
             Jack 3.5mm
           </span>
         </div>
@@ -263,20 +269,8 @@ export const App: React.FC = () => {
       {/* Main Container */}
       <div className="flex-1 flex overflow-hidden relative">
         
-        {/* Mobile Sidebar Overlay */}
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-30 md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <div
-          className={`fixed md:static inset-y-0 left-0 z-40 md:z-auto transition-transform duration-200 ease-in-out ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-          }`}
-        >
+        {/* Desktop Sidebar (hidden on mobile) */}
+        <div className="hidden md:flex">
           <PlaylistSidebar
             playlists={playlists}
             selectedPlaylistId={selectedPlaylistId}
@@ -284,11 +278,9 @@ export const App: React.FC = () => {
             onSelectPlaylist={(id) => {
               setSelectedPlaylistId(id);
               setCurrentView('playlist');
-              setMobileMenuOpen(false);
             }}
             onSelectExplore={() => {
               setCurrentView('explore');
-              setMobileMenuOpen(false);
             }}
             onCreatePlaylist={handleCreatePlaylist}
             onDeletePlaylist={handleDeletePlaylist}
@@ -298,23 +290,24 @@ export const App: React.FC = () => {
         {/* Workspace Content Panel */}
         <main className="flex-1 flex flex-col overflow-y-auto bg-zinc-950">
           
-          {/* Mobile Search Bar */}
-          <div className="p-4 sm:hidden border-b border-zinc-800">
-            <SearchBar onSearch={handleSearch} isLoading={isSearching} />
-          </div>
-
+          {/* Mobile Search Bar (Only shown on mobile explore view) */}
           {currentView === 'explore' && (
-            <div className="p-4 sm:p-6 flex-1">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-100 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-red-500" />
-                    <span>Explore & Search</span>
-                  </h2>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    Cari lagu di YouTube Music atau paste link lagu langsung untuk diputar di Raspberry Pi.
-                  </p>
-                </div>
+            <div className="p-4 md:hidden border-b border-zinc-800/80 sticky top-0 bg-zinc-950/90 backdrop-blur z-10">
+              <SearchBar onSearch={handleSearch} isLoading={isSearching} />
+            </div>
+          )}
+
+          {/* VIEW 1: EXPLORE & SEARCH */}
+          {currentView === 'explore' && (
+            <div className="p-4 sm:p-6 flex-1 pb-32 md:pb-6">
+              <div className="mb-4">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-100 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-red-500" />
+                  <span>Jelajahi & Cari Musik</span>
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Cari lagu di YouTube Music atau masukkan link lagu langsung untuk diputar lewat speaker Raspberry Pi.
+                </p>
               </div>
 
               <SearchResults
@@ -329,32 +322,89 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {currentView === 'playlist' && currentPlaylistDetail && (
-            <PlaylistDetail
-              playlist={currentPlaylistDetail}
-              currentVideoId={playerState.current_track?.video_id}
-              onPlayAll={handlePlayAllInPlaylist}
-              onPlaySong={handlePlaySongInPlaylist}
-              onRemoveSong={handleRemoveSongFromPlaylist}
-              onOpenAddModal={() => {
-                setSongToAddToPlaylist(null);
-                setIsAddModalOpen(true);
-              }}
-              onDownloadAll={handleDownloadAll}
-              onDownloadSong={handleDownloadSong}
-            />
-          )}
-
-          {currentView === 'playlist' && !currentPlaylistDetail && (
-            <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
-              Pilih playlist dari sidebar atau buat playlist baru.
-            </div>
+          {/* VIEW 2: PLAYLISTS */}
+          {currentView === 'playlist' && (
+            <>
+              {/* On Desktop, or on Mobile when a playlist is selected: Show PlaylistDetail */}
+              {selectedPlaylistId && currentPlaylistDetail ? (
+                <PlaylistDetail
+                  playlist={currentPlaylistDetail}
+                  currentVideoId={playerState.current_track?.video_id}
+                  onPlayAll={() => handlePlayAllInPlaylist(selectedPlaylistId)}
+                  onPlaySong={handlePlaySongInPlaylist}
+                  onRemoveSong={handleRemoveSongFromPlaylist}
+                  onOpenAddModal={() => {
+                    setSongToAddToPlaylist(null);
+                    setIsAddModalOpen(true);
+                  }}
+                  onDownloadAll={handleDownloadAll}
+                  onDownloadSong={handleDownloadSong}
+                  onBack={() => setSelectedPlaylistId(null)}
+                />
+              ) : (
+                /* On Mobile when no playlist is selected: Show MobilePlaylistDirectory */
+                <div className="flex-1">
+                  <MobilePlaylistDirectory
+                    playlists={playlists}
+                    onSelectPlaylist={(id) => setSelectedPlaylistId(id)}
+                    onCreatePlaylist={handleCreatePlaylist}
+                    onDeletePlaylist={handleDeletePlaylist}
+                    onPlayPlaylist={(id) => handlePlayAllInPlaylist(id)}
+                  />
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
 
-      {/* Bottom Persistent Player Bar */}
+      {/* Desktop Persistent Player Bar */}
       <PlayerBar playerState={playerState} />
+
+      {/* Mobile Floating Mini Player (Visible above BottomNav when track exists) */}
+      <MiniPlayer
+        playerState={playerState}
+        onOpenFullPlayer={() => setIsMobileFullPlayerOpen(true)}
+      />
+
+      {/* Mobile Bottom Navigation Bar */}
+      <BottomNav
+        currentView={currentView}
+        onSelectExplore={() => setCurrentView('explore')}
+        onSelectPlaylist={() => {
+          setCurrentView('playlist');
+        }}
+        onOpenNowPlaying={() => setIsMobileFullPlayerOpen(true)}
+        onOpenVolumeModal={() => setIsMobileVolumeOpen(true)}
+        isPlaying={playerState.is_playing}
+        hasTrack={hasTrack}
+      />
+
+      {/* Mobile Full Screen Now Playing Sheet */}
+      <MobileFullPlayer
+        isOpen={isMobileFullPlayerOpen}
+        onClose={() => setIsMobileFullPlayerOpen(false)}
+        playerState={playerState}
+        onAddToPlaylist={() => {
+          if (playerState.current_track?.video_id) {
+            setSongToAddToPlaylist({
+              video_id: playerState.current_track.video_id,
+              title: playerState.current_track.title,
+              artist: playerState.current_track.artist,
+              thumbnail_url: playerState.current_track.thumbnail_url || null,
+              duration: playerState.duration || 0,
+            });
+            setIsAddModalOpen(true);
+          }
+        }}
+      />
+
+      {/* Mobile Hardware Volume Modal */}
+      <MobileVolumeModal
+        isOpen={isMobileVolumeOpen}
+        onClose={() => setIsMobileVolumeOpen(false)}
+        volume={playerState.volume}
+      />
 
       {/* Add To Playlist Modal */}
       <AddToPlaylistModal
@@ -377,5 +427,5 @@ export const App: React.FC = () => {
     </div>
   );
 };
-export default App;
 
+export default App;
