@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, ListMusic, Trash2, Compass, Radio } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, ListMusic, Trash2, Compass, Radio, Flame, Activity, HardDrive } from 'lucide-react';
 import { PlaylistSummary } from '../../types/playlist';
+import { SystemHealthResponse } from '../../types/system';
+import { api } from '../../services/api';
 
 interface PlaylistSidebarProps {
   playlists: PlaylistSummary[];
@@ -10,6 +12,7 @@ interface PlaylistSidebarProps {
   onSelectExplore: () => void;
   onCreatePlaylist: (name: string, description?: string) => Promise<void>;
   onDeletePlaylist: (id: number) => Promise<void>;
+  onOpenSystemHealth?: () => void;
 }
 
 export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
@@ -20,9 +23,20 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
   onSelectExplore,
   onCreatePlaylist,
   onDeletePlaylist,
+  onOpenSystemHealth,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [health, setHealth] = useState<SystemHealthResponse | null>(null);
+
+  useEffect(() => {
+    const loadHealth = () => {
+      api.getSystemHealth().then(setHealth).catch(() => {});
+    };
+    loadHealth();
+    const timer = setInterval(loadHealth, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,14 +156,75 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
         </div>
       </div>
 
-      {/* Hardware Info Box */}
-      <div className="p-3 bg-zinc-950/80 rounded-xl border border-zinc-800 text-xs text-zinc-400">
-        <div className="flex items-center gap-2 font-medium text-zinc-200 mb-1">
-          <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          <span>Raspberry Pi 4</span>
+      {/* Hardware & Health Info Box */}
+      <div
+        onClick={onOpenSystemHealth}
+        className="p-3 bg-zinc-950/80 rounded-xl border border-zinc-800 text-xs transition cursor-pointer hover:border-zinc-700 hover:bg-zinc-900/90 group active:scale-[0.99]"
+        title="Klik untuk melihat monitor kesehatan & hardware Raspberry Pi 4"
+      >
+        <div className="flex items-center justify-between font-medium text-zinc-200 mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-semibold text-zinc-200">Raspberry Pi 4</span>
+          </div>
+          <span className="text-[10px] text-zinc-500 group-hover:text-red-400 transition font-medium">
+            Monitor →
+          </span>
         </div>
-        <p className="text-[11px] text-zinc-500">Output: 3.5mm Headphone Jack</p>
-        <p className="text-[11px] text-zinc-500">Audio Engine: mpv + ALSA</p>
+
+        {health ? (
+          <div className="space-y-1.5 pt-0.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-zinc-400 flex items-center gap-1.5">
+                <Flame className={`w-3.5 h-3.5 ${
+                  health.cpu_temp_status === 'hot'
+                    ? 'text-red-400'
+                    : health.cpu_temp_status === 'warm'
+                    ? 'text-amber-400'
+                    : 'text-emerald-400'
+                }`} />
+                <span>Suhu CPU</span>
+              </span>
+              <span className={`font-bold ${
+                health.cpu_temp_status === 'hot'
+                  ? 'text-red-400'
+                  : health.cpu_temp_status === 'warm'
+                  ? 'text-amber-400'
+                  : 'text-emerald-400'
+              }`}>
+                {health.cpu_temp !== null ? `${health.cpu_temp}°C` : '-'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-zinc-400 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-blue-400" />
+                <span>RAM</span>
+              </span>
+              <span className="font-medium text-zinc-300">
+                {health.ram.percent}%
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-zinc-400 flex items-center gap-1.5">
+                <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Sisa Disk</span>
+              </span>
+              <span className="font-medium text-zinc-300">
+                {health.disk.free_gb} GB
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[11px] text-zinc-500">
+            <p>Output: 3.5mm Headphone Jack</p>
+            <p>Audio Engine: mpv + ALSA</p>
+          </div>
+        )}
       </div>
     </aside>
   );

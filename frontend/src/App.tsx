@@ -18,6 +18,7 @@ import { MobileFullPlayer } from './components/player/MobileFullPlayer';
 import { MobileVolumeModal } from './components/player/MobileVolumeModal';
 import { EqualizerModal } from './components/player/EqualizerModal';
 import { QueueModal } from './components/player/QueueModal';
+import { SystemHealthModal } from './components/system/SystemHealthModal';
 import { BottomNav } from './components/navigation/BottomNav';
 
 export const App: React.FC = () => {
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
   const [isMobileVolumeOpen, setIsMobileVolumeOpen] = useState(false);
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [isSystemHealthOpen, setIsSystemHealthOpen] = useState(false);
 
   // Playlists state
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
@@ -327,6 +329,7 @@ export const App: React.FC = () => {
             }}
             onCreatePlaylist={handleCreatePlaylist}
             onDeletePlaylist={handleDeletePlaylist}
+            onOpenSystemHealth={() => setIsSystemHealthOpen(true)}
           />
         </div>
 
@@ -443,6 +446,7 @@ export const App: React.FC = () => {
         playerState={playerState}
         onOpenEqualizer={() => setIsEqualizerOpen(true)}
         onOpenQueue={() => setIsQueueOpen(true)}
+        onOpenSystemHealth={() => setIsSystemHealthOpen(true)}
         onAddToPlaylist={() => {
           if (playerState.current_track?.video_id) {
             setSongToAddToPlaylist({
@@ -475,6 +479,12 @@ export const App: React.FC = () => {
       <EqualizerModal
         isOpen={isEqualizerOpen}
         onClose={() => setIsEqualizerOpen(false)}
+      />
+
+      {/* Raspberry Pi System Health & Hardware Monitor Modal */}
+      <SystemHealthModal
+        isOpen={isSystemHealthOpen}
+        onClose={() => setIsSystemHealthOpen(false)}
       />
 
       {/* Add To Playlist Modal */}

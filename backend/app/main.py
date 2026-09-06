@@ -11,7 +11,7 @@ from backend.app.config import settings
 from backend.app.database import init_db
 from backend.app.services.mpv_player import player_service
 from backend.app.websocket import ws_manager
-from backend.app.routers import player, playlists, search
+from backend.app.routers import player, playlists, search, system
 
 # Setup logging
 logging.basicConfig(
@@ -67,6 +67,7 @@ app.add_middleware(
 app.include_router(player.router)
 app.include_router(playlists.router)
 app.include_router(search.router)
+app.include_router(system.router, prefix="/api/system")
 
 # Healthcheck endpoint
 @app.get("/api/health")

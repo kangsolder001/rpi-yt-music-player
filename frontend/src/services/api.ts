@@ -1,5 +1,6 @@
 import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand, RecommendationResponse, QueueResponse } from '../types/player';
 import { PlaylistDetail, PlaylistSummary, CreatePlaylistInput, AddSongInput, PlaylistSong } from '../types/playlist';
+import { SystemHealthResponse } from '../types/system';
 
 const BASE_URL = '/api';
 
@@ -218,6 +219,13 @@ export const api = {
     }
     const res = await fetch(`${BASE_URL}/search/recommendations?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch recommendations');
+    return res.json();
+  },
+
+  // --- System Health API ---
+  async getSystemHealth(): Promise<SystemHealthResponse> {
+    const res = await fetch(`${BASE_URL}/system/health`);
+    if (!res.ok) throw new Error('Failed to fetch system health');
     return res.json();
   }
 };

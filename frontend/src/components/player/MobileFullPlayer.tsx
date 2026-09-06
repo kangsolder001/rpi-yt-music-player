@@ -30,6 +30,7 @@ interface MobileFullPlayerProps {
   onAddToPlaylist?: () => void;
   onOpenEqualizer?: () => void;
   onOpenQueue?: () => void;
+  onOpenSystemHealth?: () => void;
 }
 
 export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
@@ -39,6 +40,7 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
   onAddToPlaylist,
   onOpenEqualizer,
   onOpenQueue,
+  onOpenSystemHealth,
 }) => {
   if (!isOpen) return null;
 
@@ -112,15 +114,23 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
           <ChevronDown className="w-6 h-6" />
         </button>
 
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+        <button
+          type="button"
+          onClick={onOpenSystemHealth}
+          className="flex flex-col items-center group active:scale-95 transition"
+          title="Lihat status kesehatan hardware Raspberry Pi"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 group-hover:text-zinc-200">
             Sedang Memutar di RPi
           </span>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium mt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Speaker Jack 3.5mm</span>
+            <span className="text-[10px] text-zinc-500 group-hover:text-zinc-400 font-normal underline decoration-dotted">
+              📊 Status
+            </span>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-1">
           {onOpenQueue && (
