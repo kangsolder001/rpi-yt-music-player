@@ -139,9 +139,9 @@ export const api = {
   },
 
   // --- Search & Resolve APIs ---
-  async search(query: string): Promise<SearchResult[]> {
+  async search(query: string, limit: number = 20, offset: number = 0): Promise<SearchResult[]> {
     if (!query.trim()) return [];
-    const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`);
+    const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error('Failed to search songs');
     return res.json();
   },
@@ -184,11 +184,15 @@ export const api = {
   },
 
   // --- Recommendations API ---
-  async getRecommendations(category?: string): Promise<RecommendationResponse> {
-    const url = category
-      ? `${BASE_URL}/search/recommendations?category=${encodeURIComponent(category)}`
-      : `${BASE_URL}/search/recommendations`;
-    const res = await fetch(url);
+  async getRecommendations(category?: string, limit: number = 18, offset: number = 0): Promise<RecommendationResponse> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    if (category) {
+      params.append('category', category);
+    }
+    const res = await fetch(`${BASE_URL}/search/recommendations?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch recommendations');
     return res.json();
   }

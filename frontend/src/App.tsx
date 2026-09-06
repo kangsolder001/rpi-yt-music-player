@@ -49,7 +49,10 @@ export const App: React.FC = () => {
 
   // Search state
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMoreSearch, setIsLoadingMoreSearch] = useState(false);
+  const [hasMoreSearch, setHasMoreSearch] = useState(false);
 
   // Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -96,20 +99,46 @@ export const App: React.FC = () => {
 
   const handleSearch = async (query: string) => {
     setIsSearching(true);
+    setSearchQuery(query);
     setCurrentView('explore');
     try {
       // Check if it's a direct URL
       if (query.includes('youtube.com') || query.includes('youtu.be')) {
         const resolved = await api.resolveUrl(query);
         setSearchResults([resolved]);
+        setHasMoreSearch(false);
       } else {
-        const results = await api.search(query);
+        const results = await api.search(query, 20, 0);
         setSearchResults(results);
+        setHasMoreSearch(results.length >= 20);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleLoadMoreSearch = async () => {
+    if (isLoadingMoreSearch || !hasMoreSearch || !searchQuery) return;
+    setIsLoadingMoreSearch(true);
+    try {
+      const nextResults = await api.search(searchQuery, 20, searchResults.length);
+      if (nextResults.length > 0) {
+        setSearchResults((prev) => {
+          const existingIds = new Set(prev.map((s) => s.video_id));
+          const newItems = nextResults.filter((n) => !existingIds.has(n.video_id));
+          return [...prev, ...newItems];
+        });
+        setHasMoreSearch(nextResults.length >= 20);
+      } else {
+        setHasMoreSearch(false);
+      }
+    } catch (e) {
+      console.error('Failed to load more search results', e);
+      setHasMoreSearch(false);
+    } finally {
+      setIsLoadingMoreSearch(false);
     }
   };
 
@@ -321,7 +350,13 @@ export const App: React.FC = () => {
                     setSongToAddToPlaylist(song);
                     setIsAddModalOpen(true);
                   }}
-                  onClearSearch={() => setSearchResults([])}
+                  onClearSearch={() => {
+                    setSearchResults([]);
+                    setSearchQuery('');
+                  }}
+                  hasMore={hasMoreSearch}
+                  isLoadingMore={isLoadingMoreSearch}
+                  onLoadMore={handleLoadMoreSearch}
                 />
               ) : (
                 <ExploreRecommendations

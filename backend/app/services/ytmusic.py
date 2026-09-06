@@ -31,6 +31,7 @@ class YTMusicService:
             logger.warning("Could not initialize unauthenticated YTMusic: %s", e)
             self.ytm = None
         self._rec_cache: Dict[str, Tuple[float, List[SearchResultItem]]] = {}
+        self._search_cache: Dict[str, Tuple[float, List[SearchResultItem]]] = {}
 
     @staticmethod
     def extract_video_id(url_or_id: str) -> Optional[str]:
@@ -44,18 +45,34 @@ class YTMusicService:
             return match.group(1)
         return None
 
-    def search_songs(self, query: str, limit: int = 15) -> List[SearchResultItem]:
-        """Search songs on YouTube Music."""
+    def search_songs(self, query: str, limit: int = 20, offset: int = 0) -> List[SearchResultItem]:
+        """Search songs on YouTube Music with offset and caching support."""
         if not self.ytm or not query.strip():
             return []
 
+        q_key = query.strip().lower()
+        now = time.time()
+        needed_total = offset + limit
+
+        # Check search cache (15 min TTL)
+        cached_entry = self._search_cache.get(q_key)
+        if cached_entry:
+            cache_time, cached_items = cached_entry
+            if now - cache_time < 900:
+                if len(cached_items) >= needed_total:
+                    return cached_items[offset:needed_total]
+
+        # Fetch more from ytmusicapi (fetch at least needed_total, min 30, up to 100)
+        fetch_limit = min(max(needed_total, 30), 100)
         results: List[SearchResultItem] = []
         try:
-            raw_results = self.ytm.search(query, filter="songs", limit=limit)
+            raw_results = self.ytm.search(query, filter="songs", limit=fetch_limit)
+            seen_ids = set()
             for item in raw_results:
                 video_id = item.get("videoId")
-                if not video_id:
+                if not video_id or video_id in seen_ids:
                     continue
+                seen_ids.add(video_id)
 
                 title = item.get("title", "Unknown Title")
                 
@@ -81,40 +98,44 @@ class YTMusicService:
                     duration=duration_seconds or 0,
                     duration_text=duration_text or "0:00"
                 ))
+
+            self._search_cache[q_key] = (now, results)
         except Exception as e:
             logger.error("Error searching YouTube Music for '%s': %s", query, e)
+            if cached_entry:
+                results = cached_entry[1]
 
-        return results
+        return results[offset:needed_total]
 
-    def get_recommendations(self, category: Optional[str] = "trending", limit: int = 15) -> Dict[str, Any]:
-        """Get curated recommendation songs by category (with in-memory TTL caching)."""
+    def get_recommendations(self, category: Optional[str] = "trending", limit: int = 18, offset: int = 0) -> Dict[str, Any]:
+        """Get curated recommendation songs by category (with in-memory TTL caching and pagination)."""
         cat_key = category if category in RECOMMENDATION_CATEGORIES else "trending"
         cat_info = RECOMMENDATION_CATEGORIES[cat_key]
 
         now = time.time()
-        if cat_key in self._rec_cache:
-            cache_time, items = self._rec_cache[cat_key]
-            if now - cache_time < 3600 and items:
-                return {
-                    "category": cat_key,
-                    "title": cat_info["title"],
-                    "emoji": cat_info["emoji"],
-                    "items": items,
-                    "categories": [
-                        {"id": k, "title": v["title"], "emoji": v["emoji"]}
-                        for k, v in RECOMMENDATION_CATEGORIES.items()
-                    ]
-                }
+        cached_entry = self._rec_cache.get(cat_key)
+        items: List[SearchResultItem] = []
 
-        items = self.search_songs(cat_info["query"], limit=limit)
-        if items:
-            self._rec_cache[cat_key] = (now, items)
+        if cached_entry:
+            cache_time, cached_items = cached_entry
+            if now - cache_time < 3600 and cached_items:
+                items = cached_items
+
+        if not items:
+            items = self.search_songs(cat_info["query"], limit=60, offset=0)
+            if items:
+                self._rec_cache[cat_key] = (now, items)
+
+        sliced_items = items[offset: offset + limit]
+        has_more = (offset + limit) < len(items)
 
         return {
             "category": cat_key,
             "title": cat_info["title"],
             "emoji": cat_info["emoji"],
-            "items": items,
+            "items": sliced_items,
+            "total": len(items),
+            "has_more": has_more,
             "categories": [
                 {"id": k, "title": v["title"], "emoji": v["emoji"]}
                 for k, v in RECOMMENDATION_CATEGORIES.items()

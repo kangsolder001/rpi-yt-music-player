@@ -57,6 +57,8 @@ export interface RecommendationResponse {
   title: string;
   emoji: string;
   items: SearchResult[];
+  has_more?: boolean;
+  total?: number;
   categories: RecommendationCategory[];
 }
 

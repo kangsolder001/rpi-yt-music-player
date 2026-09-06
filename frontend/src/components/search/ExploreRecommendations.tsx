@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Play, Plus, Music, Loader2, Disc3 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Sparkles, Play, Plus, Music, Loader2, Disc3, ChevronDown } from 'lucide-react';
 import { SearchResult, RecommendationCategory } from '../../types/player';
 import { api } from '../../services/api';
 
@@ -26,6 +26,10 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
   const [title, setTitle] = useState<string>('Populer Hari Ini');
   const [emoji, setEmoji] = useState<string>('🔥');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     loadCategory(selectedCategory);
@@ -33,11 +37,13 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
 
   const loadCategory = async (catId: string) => {
     setIsLoading(true);
+    setHasMore(true);
     try {
-      const data = await api.getRecommendations(catId);
+      const data = await api.getRecommendations(catId, 18, 0);
       setSongs(data.items);
       setTitle(data.title);
       setEmoji(data.emoji);
+      setHasMore(data.has_more ?? (data.items.length >= 18));
       if (data.categories && data.categories.length > 0) {
         setCategories(data.categories);
       }
@@ -47,6 +53,51 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
       setIsLoading(false);
     }
   };
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMore || isLoading) return;
+    setIsLoadingMore(true);
+    try {
+      const data = await api.getRecommendations(selectedCategory, 18, songs.length);
+      if (data.items && data.items.length > 0) {
+        setSongs((prev) => {
+          const existingIds = new Set(prev.map((s) => s.video_id));
+          const newItems = data.items.filter((item) => !existingIds.has(item.video_id));
+          return [...prev, ...newItems];
+        });
+        setHasMore(data.has_more ?? (data.items.length >= 18));
+      } else {
+        setHasMore(false);
+      }
+    } catch (e) {
+      console.error('Failed to load more recommendations', e);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // IntersectionObserver for seamless infinite scrolling on scroll
+  useEffect(() => {
+    if (!hasMore || isLoading || isLoadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { rootMargin: '300px' }
+    );
+
+    const target = sentinelRef.current;
+    if (target) {
+      observer.observe(target);
+    }
+    return () => {
+      if (target) observer.unobserve(target);
+      observer.disconnect();
+    };
+  }, [hasMore, isLoading, isLoadingMore, songs.length, selectedCategory]);
 
   const formatTime = (seconds: number): string => {
     if (!seconds) return '00:00';
@@ -177,6 +228,33 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Infinite Scroll Sentinel & Load More Controls */}
+      {!isLoading && songs.length > 0 && (
+        <div className="pt-4 flex flex-col items-center">
+          {/* Invisible sentinel for auto-loading on scroll */}
+          <div ref={sentinelRef} className="h-6 w-full pointer-events-none" />
+
+          {isLoadingMore ? (
+            <div className="flex items-center gap-2.5 py-4 px-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 text-zinc-300 text-xs font-semibold shadow-md">
+              <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+              <span>Memuat rekomendasi lainnya...</span>
+            </div>
+          ) : hasMore ? (
+            <button
+              onClick={handleLoadMore}
+              className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95"
+            >
+              <ChevronDown className="w-4 h-4 text-zinc-400" />
+              <span>Muat Lebih Banyak Lagu</span>
+            </button>
+          ) : (
+            <div className="text-center py-6 text-zinc-500 text-xs font-medium border-t border-zinc-900/80 w-full mt-4">
+              Semua rekomendasi untuk kategori ini telah dimuat ✨
+            </div>
+          )}
         </div>
       )}
     </div>

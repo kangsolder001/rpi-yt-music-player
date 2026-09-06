@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, Plus, Music, Sparkles, ArrowLeft } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Play, Plus, Music, Sparkles, ArrowLeft, Loader2, ChevronDown } from 'lucide-react';
 import { SearchResult } from '../../types/player';
 
 interface SearchResultsProps {
@@ -8,6 +8,9 @@ interface SearchResultsProps {
   onAddToPlaylist: (song: SearchResult) => void;
   onClearSearch?: () => void;
   currentVideoId?: string | null;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
@@ -16,7 +19,32 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onAddToPlaylist,
   onClearSearch,
   currentVideoId,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }) => {
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasMore || isLoadingMore || !onLoadMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: '300px' }
+    );
+
+    const target = sentinelRef.current;
+    if (target) {
+      observer.observe(target);
+    }
+    return () => {
+      if (target) observer.unobserve(target);
+      observer.disconnect();
+    };
+  }, [hasMore, isLoadingMore, onLoadMore, results.length]);
   const formatTime = (seconds: number): string => {
     if (!seconds) return '00:00';
     const mins = Math.floor(seconds / 60);
@@ -113,6 +141,33 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           );
         })}
       </div>
+
+      {/* Infinite Scroll Sentinel & Load More Controls */}
+      {results.length > 0 && (
+        <div className="pt-4 flex flex-col items-center">
+          {/* Invisible sentinel for auto-loading on scroll */}
+          <div ref={sentinelRef} className="h-6 w-full pointer-events-none" />
+
+          {isLoadingMore ? (
+            <div className="flex items-center gap-2.5 py-3.5 px-5 rounded-2xl bg-zinc-900/80 border border-zinc-800 text-zinc-300 text-xs font-semibold shadow-md">
+              <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+              <span>Memuat hasil lainnya...</span>
+            </div>
+          ) : hasMore && onLoadMore ? (
+            <button
+              onClick={onLoadMore}
+              className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95"
+            >
+              <ChevronDown className="w-4 h-4 text-zinc-400" />
+              <span>Muat Lebih Banyak Hasil</span>
+            </button>
+          ) : (
+            <div className="text-center py-6 text-zinc-500 text-xs font-medium border-t border-zinc-900/80 w-full mt-4">
+              Semua hasil pencarian telah ditampilkan ✨
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

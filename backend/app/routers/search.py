@@ -6,9 +6,13 @@ from backend.app.services.ytmusic import ytmusic_service
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 @router.get("", response_model=List[SearchResultItem])
-def search_youtube_music(q: str = Query(..., min_length=1, description="Song title or artist query"), limit: int = 15):
-    """Search YouTube Music songs by keywords."""
-    return ytmusic_service.search_songs(query=q, limit=limit)
+def search_youtube_music(
+    q: str = Query(..., min_length=1, description="Song title or artist query"),
+    limit: int = Query(20, ge=1, le=50, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Offset index for pagination")
+):
+    """Search YouTube Music songs by keywords with pagination support."""
+    return ytmusic_service.search_songs(query=q, limit=limit, offset=offset)
 
 @router.get("/resolve", response_model=SearchResultItem)
 def resolve_youtube_url(url: str = Query(..., description="YouTube video URL or Video ID")):
@@ -27,7 +31,11 @@ def resolve_youtube_url(url: str = Query(..., description="YouTube video URL or 
     )
 
 @router.get("/recommendations")
-def get_recommendations(category: Optional[str] = Query(None, description="Category id, e.g. trending, relax, focus")):
-    """Get curated music recommendations and moods."""
-    return ytmusic_service.get_recommendations(category=category)
+def get_recommendations(
+    category: Optional[str] = Query(None, description="Category id, e.g. trending, relax, focus"),
+    limit: int = Query(18, ge=1, le=50, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Offset index for pagination")
+):
+    """Get curated music recommendations and moods with pagination support."""
+    return ytmusic_service.get_recommendations(category=category, limit=limit, offset=offset)
 
