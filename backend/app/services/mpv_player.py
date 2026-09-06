@@ -54,8 +54,13 @@ class MPVPlayerService:
             "--idle=yes",
             f"--input-ipc-server={self.socket_path}",
             "--no-video",
+            "--ao=alsa",
             "--volume=100",  # Always keep player volume at max; control volume via ALSA
             "--ytdl-format=bestaudio/best",
+            "--ytdl-raw-options=extractor-args=youtube:player_client=android",
+            "--cache-pause-initial=no",
+            "--demuxer-lavf-analyzeduration=0.5",
+            "--demuxer-lavf-probesize=32768",
             "--gapless-audio=yes",
         ]
 
