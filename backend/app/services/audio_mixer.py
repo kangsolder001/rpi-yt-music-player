@@ -26,18 +26,19 @@ class AudioMixerService:
         if not self.amixer_bin:
             return self._cached_volume
 
-        # Try setting volume on configured control and card
-        cmd = [self.amixer_bin, "-q", "-c", self.card, "sset", self.control, f"{volume}%"]
+        # Try setting volume with -M (mapped volume for natural human ear response)
+        cmd = [self.amixer_bin, "-M", "-q", "-c", self.card, "sset", self.control, f"{volume}%"]
         try:
             subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            logger.info("Set ALSA volume on card %s [%s] to %d%%", self.card, self.control, volume)
+            logger.info("Set ALSA volume (mapped) on card %s [%s] to %d%%", self.card, self.control, volume)
         except Exception as e:
-            logger.debug("Failed setting volume with specific card/control (%s), trying default: %s", cmd, e)
-            # Fallback: try without explicit card/control specification or fallback to Master
+            logger.debug("Failed setting volume with specific card/control (%s), trying fallback: %s", cmd, e)
             for fallback_cmd in [
-                [self.amixer_bin, "-q", "sset", self.control, f"{volume}%"],
-                [self.amixer_bin, "-q", "sset", "Master", f"{volume}%"],
-                [self.amixer_bin, "-q", "sset", "PCM", f"{volume}%"],
+                [self.amixer_bin, "-M", "-q", "sset", self.control, f"{volume}%"],
+                [self.amixer_bin, "-M", "-q", "sset", "Master", f"{volume}%"],
+                [self.amixer_bin, "-M", "-q", "sset", "PCM", f"{volume}%"],
+                # Standard linear fallback if -M fails for any reason
+                [self.amixer_bin, "-q", "-c", self.card, "sset", self.control, f"{volume}%"],
             ]:
                 try:
                     subprocess.run(fallback_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -49,15 +50,17 @@ class AudioMixerService:
         return self._cached_volume
 
     def get_volume(self) -> int:
-        """Get current hardware ALSA volume percentage (0 to 100)."""
+        """Get current hardware ALSA volume percentage (0 to 100) using mapped curve."""
         if not self.amixer_bin:
             return self._cached_volume
 
         for cmd in [
+            [self.amixer_bin, "-M", "-c", self.card, "sget", self.control],
+            [self.amixer_bin, "-M", "sget", self.control],
+            [self.amixer_bin, "-M", "sget", "Master"],
+            [self.amixer_bin, "-M", "sget", "PCM"],
+            # Fallback without -M
             [self.amixer_bin, "-c", self.card, "sget", self.control],
-            [self.amixer_bin, "sget", self.control],
-            [self.amixer_bin, "sget", "Master"],
-            [self.amixer_bin, "sget", "PCM"],
         ]:
             try:
                 res = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
