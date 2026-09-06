@@ -4,7 +4,7 @@ from backend.app.database import get_db
 from backend.app.models import Playlist, PlaylistSong
 from backend.app.schemas import (
     PlayerState, PlaySongRequest, VolumeRequest, SeekRequest, RepeatRequest,
-    EqualizerUpdateRequest, EqualizerPresetRequest
+    AutoplayRequest, EqualizerUpdateRequest, EqualizerPresetRequest
 )
 from backend.app.services.mpv_player import player_service
 from backend.app.services.audio_mixer import audio_mixer
@@ -117,6 +117,13 @@ async def set_hardware_volume(req: VolumeRequest):
 async def set_repeat_mode(req: RepeatRequest):
     """Set repeat mode: 'off', 'all', 'one'."""
     player_service.set_repeat_mode(req.mode)
+    await ws_manager.broadcast_state()
+    return player_service.get_state()
+
+@router.post("/autoplay", response_model=PlayerState)
+async def set_autoplay(req: AutoplayRequest):
+    """Enable or disable autoplay of similar recommended tracks."""
+    player_service.set_autoplay(req.enabled)
     await ws_manager.broadcast_state()
     return player_service.get_state()
 

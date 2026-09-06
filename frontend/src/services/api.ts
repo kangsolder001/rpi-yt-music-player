@@ -83,6 +83,16 @@ export const api = {
     return res.json();
   },
 
+  async setAutoplay(enabled: boolean): Promise<PlayerState> {
+    const res = await fetch(`${BASE_URL}/player/autoplay`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    });
+    if (!res.ok) throw new Error('Failed to set autoplay mode');
+    return res.json();
+  },
+
   // --- Playlists APIs ---
   async getPlaylists(): Promise<PlaylistSummary[]> {
     const res = await fetch(`${BASE_URL}/playlists`);

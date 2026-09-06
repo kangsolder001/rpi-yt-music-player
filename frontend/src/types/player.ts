@@ -14,6 +14,7 @@ export interface PlayerState {
   duration: number;
   volume: number; // 0 to 100
   repeat_mode: 'off' | 'all' | 'one';
+  autoplay?: boolean;
   current_track: TrackInfo | null;
   playlist_id?: number | null;
   queue_length: number;

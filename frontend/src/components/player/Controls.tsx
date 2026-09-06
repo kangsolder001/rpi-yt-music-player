@@ -1,16 +1,18 @@
 import React from 'react';
-import { Play, Pause, Square, SkipBack, SkipForward, Repeat, Repeat1 } from 'lucide-react';
+import { Play, Pause, Square, SkipBack, SkipForward, Repeat, Repeat1, Sparkles } from 'lucide-react';
 import { api } from '../../services/api';
 
 interface ControlsProps {
   isPlaying: boolean;
   repeatMode: 'off' | 'all' | 'one';
+  autoplay?: boolean;
   disabled?: boolean;
 }
 
 export const Controls: React.FC<ControlsProps> = ({
   isPlaying,
   repeatMode,
+  autoplay = true,
   disabled = false,
 }) => {
   const handleToggle = async () => {
@@ -54,8 +56,34 @@ export const Controls: React.FC<ControlsProps> = ({
     }
   };
 
+  const handleToggleAutoplay = async () => {
+    try {
+      await api.setAutoplay(!autoplay);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 sm:gap-4">
+      {/* Autoplay Radio Toggle */}
+      <button
+        onClick={handleToggleAutoplay}
+        disabled={disabled}
+        title={
+          autoplay
+            ? 'Autoplay Rekomendasi: Aktif (Otomatis memutar lagu sejenis saat lagu selesai)'
+            : 'Autoplay Rekomendasi: Mati'
+        }
+        className={`p-1.5 rounded-full transition ${
+          autoplay
+            ? 'text-amber-400 hover:text-amber-300 hover:bg-zinc-800'
+            : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'
+        } disabled:opacity-40`}
+      >
+        <Sparkles className="w-4 h-4" />
+      </button>
+
       {/* Repeat Button */}
       <button
         onClick={handleCycleRepeat}

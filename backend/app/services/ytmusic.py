@@ -188,6 +188,54 @@ class YTMusicService:
 
         return None
 
+    def get_related_tracks(self, video_id: str, limit: int = 25) -> List[SearchResultItem]:
+        """Get related / radio watch playlist tracks for a song."""
+        if not video_id:
+            return []
+
+        results: List[SearchResultItem] = []
+        # 1. Try ytmusicapi get_watch_playlist
+        if self.ytm:
+            try:
+                watch_data = self.ytm.get_watch_playlist(videoId=video_id, limit=limit)
+                raw_tracks = watch_data.get("tracks", [])
+                for item in raw_tracks:
+                    v_id = item.get("videoId")
+                    if not v_id or v_id == video_id:
+                        continue
+
+                    title = item.get("title", "Unknown Title")
+                    artists_list = item.get("artists", [])
+                    artist = ", ".join([a.get("name", "") for a in artists_list if a.get("name")]) or "Unknown Artist"
+
+                    duration_text = item.get("length", "")
+                    duration_seconds = self._parse_duration_text(duration_text) if duration_text else 0
+
+                    thumbnails = item.get("thumbnail", [])
+                    thumb_url = thumbnails[-1].get("url") if thumbnails else None
+
+                    results.append(SearchResultItem(
+                        video_id=v_id,
+                        title=title,
+                        artist=artist,
+                        thumbnail_url=thumb_url,
+                        duration=duration_seconds,
+                        duration_text=duration_text or "0:00"
+                    ))
+            except Exception as e:
+                logger.error("Error getting watch playlist for %s: %s", video_id, e)
+
+        # 2. Fallback: if get_watch_playlist returned nothing, search for related radio
+        if not results:
+            track_info = self.get_track_info(video_id)
+            if track_info:
+                query = f"{track_info.get('artist', '')} {track_info.get('title', '')} song"
+                results = self.search_songs(query, limit=10)
+                # Exclude the same track
+                results = [r for r in results if r.video_id != video_id]
+
+        return results
+
     @staticmethod
     def _parse_duration_text(duration_text: str) -> int:
         """Parse 'MM:SS' or 'HH:MM:SS' into seconds."""

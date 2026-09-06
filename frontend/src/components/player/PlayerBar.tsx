@@ -50,6 +50,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualiz
         <Controls
           isPlaying={playerState.is_playing}
           repeatMode={playerState.repeat_mode || 'off'}
+          autoplay={playerState.autoplay ?? true}
           disabled={!hasTrack && playerState.is_idle}
         />
         <div className="w-full mt-1.5">

@@ -17,6 +17,7 @@ import {
   Radio,
   CheckCircle2,
   SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { api } from '../../services/api';
@@ -41,6 +42,7 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
   const currentTrack = playerState.current_track;
   const isPlaying = playerState.is_playing;
   const repeatMode = playerState.repeat_mode || 'off';
+  const autoplay = playerState.autoplay ?? true;
   const duration = playerState.duration || 0;
   const currentTime = playerState.current_time || 0;
   const volume = playerState.volume;
@@ -83,6 +85,14 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
       handleVolumeChange(0);
     } else {
       handleVolumeChange(75);
+    }
+  };
+
+  const handleToggleAutoplay = async () => {
+    try {
+      await api.setAutoplay(!autoplay);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -243,13 +253,17 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
             <SkipForward className="w-7 h-7 fill-current" />
           </button>
 
-          {/* Stop */}
+          {/* Autoplay Radio Toggle */}
           <button
-            onClick={handleStop}
-            className="p-3 text-zinc-500 hover:text-zinc-300 active:scale-90 transition"
-            title="Stop Pemutaran"
+            onClick={handleToggleAutoplay}
+            className={`p-3 rounded-full transition active:scale-90 ${
+              autoplay
+                ? 'text-amber-400 bg-amber-950/40 border border-amber-800/60 shadow-md shadow-amber-950/30'
+                : 'text-zinc-600 hover:text-zinc-400'
+            }`}
+            title={`Autoplay Rekomendasi: ${autoplay ? 'Aktif' : 'Mati'}`}
           >
-            <Square className="w-5 h-5 fill-current" />
+            <Sparkles className="w-5 h-5" />
           </button>
         </div>
 

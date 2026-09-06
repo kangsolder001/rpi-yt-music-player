@@ -69,6 +69,7 @@ class PlayerState(BaseModel):
     duration: float = 0.0
     volume: int = 75  # ALSA Hardware volume (0 - 100)
     repeat_mode: str = "off"  # "off", "all", "one"
+    autoplay: bool = True  # Auto-play similar recommended tracks
     current_track: Optional[TrackInfo] = None
     playlist_id: Optional[int] = None
     queue_length: int = 0
@@ -88,6 +89,9 @@ class SeekRequest(BaseModel):
 
 class RepeatRequest(BaseModel):
     mode: str = Field(..., pattern="^(off|all|one)$")
+
+class AutoplayRequest(BaseModel):
+    enabled: bool
 
 # --- Search Schemas ---
 class SearchResultItem(BaseModel):
