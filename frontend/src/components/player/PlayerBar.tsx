@@ -1,0 +1,70 @@
+import React from 'react';
+import { Music, Disc3 } from 'lucide-react';
+import { PlayerState } from '../../types/player';
+import { Controls } from './Controls';
+import { ProgressBar } from './ProgressBar';
+import { VolumeSlider } from './VolumeSlider';
+
+interface PlayerBarProps {
+  playerState: PlayerState;
+}
+
+export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState }) => {
+  const currentTrack = playerState.current_track;
+  const hasTrack = Boolean(currentTrack && currentTrack.video_id);
+
+  return (
+    <footer className="h-24 sm:h-20 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0 z-30 shadow-2xl">
+      {/* Current Song Info (Left) */}
+      <div className="flex items-center gap-3 w-full sm:w-1/4 min-w-[200px]">
+        <div className="relative w-12 h-12 rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center shrink-0 shadow-md">
+          {currentTrack?.thumbnail_url ? (
+            <img
+              src={currentTrack.thumbnail_url}
+              alt={currentTrack.title}
+              className={`w-full h-full object-cover ${playerState.is_playing ? 'animate-pulse' : ''}`}
+            />
+          ) : (
+            <Music className="w-5 h-5 text-zinc-500" />
+          )}
+          {playerState.is_playing && (
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <Disc3 className="w-6 h-6 text-white/80 animate-spin" />
+            </div>
+          )}
+        </div>
+
+        <div className="truncate flex-1">
+          <div className="font-semibold text-sm text-zinc-100 truncate">
+            {currentTrack?.title || 'No Track Playing'}
+          </div>
+          <div className="text-xs text-zinc-400 truncate">
+            {currentTrack?.artist || 'Select a song or playlist'}
+          </div>
+        </div>
+      </div>
+
+      {/* Playback Controls & Progress Bar (Center) */}
+      <div className="flex flex-col items-center justify-center w-full sm:w-2/4 max-w-xl">
+        <Controls
+          isPlaying={playerState.is_playing}
+          repeatMode={playerState.repeat_mode || 'off'}
+          disabled={!hasTrack && playerState.is_idle}
+        />
+        <div className="w-full mt-1">
+          <ProgressBar
+            currentTime={playerState.current_time}
+            duration={playerState.duration}
+            disabled={!hasTrack && playerState.is_idle}
+          />
+        </div>
+      </div>
+
+      {/* Hardware Volume Control (Right) */}
+      <div className="hidden sm:flex items-center justify-end gap-3 w-1/4">
+        <VolumeSlider volume={playerState.volume} />
+      </div>
+    </footer>
+  );
+};
+

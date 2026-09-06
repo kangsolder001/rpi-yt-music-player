@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Database & local data
+*.sqlite3
+*.db
+/data/*.db
+!/data/.gitkeep
+
+# Node & Frontend
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs & Sockets
+*.log
+/tmp/mpv-socket
+
+# OS generated files
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  yt-player:
+    image: rpi-yt-music-player:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rpi-yt-music-player
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    devices:
+      # Pass host sound card directly to container
+      - "/dev/snd:/dev/snd"
+    group_add:
+      # Grant container process access to host audio devices
+      - audio
+    volumes:
+      # Persistent SQLite database and playlists
+      - ./data:/app/data
+    environment:
+      - DATA_DIR=/app/data
+      - DATABASE_URL=sqlite:////app/data/music.db
+      - ALSA_CARD=2
+      - ALSA_CONTROL=PCM         # On RPi 4, 3.5mm headphone jack is Card 2, control PCM
+      - MPV_AUDIO_DEVICE=alsa/plughw:2,0
+      - DEBUG=false
+
