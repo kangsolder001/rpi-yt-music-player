@@ -2,9 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app.models import Playlist, PlaylistSong
-from backend.app.schemas import PlayerState, PlaySongRequest, VolumeRequest, SeekRequest, RepeatRequest
+from backend.app.schemas import (
+    PlayerState, PlaySongRequest, VolumeRequest, SeekRequest, RepeatRequest,
+    EqualizerUpdateRequest, EqualizerPresetRequest
+)
 from backend.app.services.mpv_player import player_service
 from backend.app.services.audio_mixer import audio_mixer
+from backend.app.services.equalizer import equalizer_service
 from backend.app.websocket import ws_manager
 
 router = APIRouter(prefix="/api/player", tags=["player"])
@@ -115,6 +119,31 @@ async def set_repeat_mode(req: RepeatRequest):
     player_service.set_repeat_mode(req.mode)
     await ws_manager.broadcast_state()
     return player_service.get_state()
+
+# Equalizer & Audio Enhancer Endpoints
+@router.get("/equalizer")
+def get_equalizer():
+    """Get current equalizer configuration, bands, and presets."""
+    return equalizer_service.get_state()
+
+@router.post("/equalizer")
+def update_equalizer(req: EqualizerUpdateRequest):
+    """Update custom equalizer bands and filters."""
+    bands_dict = [b.model_dump() for b in req.bands] if req.bands is not None else None
+    return equalizer_service.update_settings(
+        bands=bands_dict,
+        normalizer_enabled=req.normalizer_enabled,
+        stereo_widen=req.stereo_widen,
+        mpv_player=player_service
+    )
+
+@router.post("/equalizer/preset")
+def set_equalizer_preset(req: EqualizerPresetRequest):
+    """Apply an instant equalizer preset."""
+    try:
+        return equalizer_service.set_preset(req.preset, player_service)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # WebSocket Endpoint
 @router.websocket("/ws")

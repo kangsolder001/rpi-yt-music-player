@@ -1,4 +1,4 @@
-import { PlayerState, SearchResult, TrackInfo } from '../types/player';
+import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand } from '../types/player';
 import { PlaylistDetail, PlaylistSummary, CreatePlaylistInput, AddSongInput, PlaylistSong } from '../types/playlist';
 
 const BASE_URL = '/api';
@@ -149,6 +149,37 @@ export const api = {
   async resolveUrl(url: string): Promise<SearchResult> {
     const res = await fetch(`${BASE_URL}/search/resolve?url=${encodeURIComponent(url)}`);
     if (!res.ok) throw new Error('Failed to resolve URL');
+    return res.json();
+  },
+
+  // --- Equalizer APIs ---
+  async getEqualizer(): Promise<EqualizerState> {
+    const res = await fetch(`${BASE_URL}/player/equalizer`);
+    if (!res.ok) throw new Error('Failed to fetch equalizer settings');
+    return res.json();
+  },
+
+  async updateEqualizer(payload: {
+    bands?: EqualizerBand[];
+    normalizer_enabled?: boolean;
+    stereo_widen?: boolean;
+  }): Promise<EqualizerState> {
+    const res = await fetch(`${BASE_URL}/player/equalizer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update equalizer');
+    return res.json();
+  },
+
+  async setEqualizerPreset(preset: string): Promise<EqualizerState> {
+    const res = await fetch(`${BASE_URL}/player/equalizer/preset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preset }),
+    });
+    if (!res.ok) throw new Error('Failed to apply preset');
     return res.json();
   }
 };

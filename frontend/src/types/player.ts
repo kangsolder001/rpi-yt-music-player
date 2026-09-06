@@ -28,3 +28,21 @@ export interface SearchResult {
   duration_text?: string;
 }
 
+export interface EqualizerBand {
+  frequency: number;
+  gain: number; // -12 to 12 dB
+}
+
+export interface PresetInfo {
+  name: string;
+  description: string;
+}
+
+export interface EqualizerState {
+  preset: string;
+  bands: EqualizerBand[];
+  normalizer_enabled: boolean;
+  stereo_widen: boolean;
+  available_presets: Record<string, PresetInfo>;
+}
+

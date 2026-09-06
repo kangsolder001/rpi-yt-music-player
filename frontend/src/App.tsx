@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, Sparkles, Plus, Compass, ListMusic } from 'lucide-react';
+import { Radio, Sparkles, Plus, Compass, ListMusic, SlidersHorizontal } from 'lucide-react';
 import { PlayerState, SearchResult } from './types/player';
 import { PlaylistDetail as PlaylistDetailType, PlaylistSummary } from './types/playlist';
 import { api } from './services/api';
@@ -15,6 +15,7 @@ import { PlayerBar } from './components/player/PlayerBar';
 import { MiniPlayer } from './components/player/MiniPlayer';
 import { MobileFullPlayer } from './components/player/MobileFullPlayer';
 import { MobileVolumeModal } from './components/player/MobileVolumeModal';
+import { EqualizerModal } from './components/player/EqualizerModal';
 import { BottomNav } from './components/navigation/BottomNav';
 
 export const App: React.FC = () => {
@@ -35,9 +36,10 @@ export const App: React.FC = () => {
   // Views & Navigation
   const [currentView, setCurrentView] = useState<'explore' | 'playlist'>('explore');
 
-  // Mobile Modals
+  // Mobile & Audio Modals
   const [isMobileFullPlayerOpen, setIsMobileFullPlayerOpen] = useState(false);
   const [isMobileVolumeOpen, setIsMobileVolumeOpen] = useState(false);
+  const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
 
   // Playlists state
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
@@ -249,6 +251,15 @@ export const App: React.FC = () => {
         {/* Header Right Actions */}
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsEqualizerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 rounded-xl transition text-xs font-semibold shadow-sm"
+            title="Equalizer & Sound Enhancer"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-red-500" />
+            <span className="hidden sm:inline">Equalizer</span>
+          </button>
+
+          <button
             onClick={() => {
               setSongToAddToPlaylist(null);
               setIsAddModalOpen(true);
@@ -359,7 +370,10 @@ export const App: React.FC = () => {
       </div>
 
       {/* Desktop Persistent Player Bar */}
-      <PlayerBar playerState={playerState} />
+      <PlayerBar
+        playerState={playerState}
+        onOpenEqualizer={() => setIsEqualizerOpen(true)}
+      />
 
       {/* Mobile Floating Mini Player (Visible above BottomNav when track exists) */}
       <MiniPlayer
@@ -385,6 +399,7 @@ export const App: React.FC = () => {
         isOpen={isMobileFullPlayerOpen}
         onClose={() => setIsMobileFullPlayerOpen(false)}
         playerState={playerState}
+        onOpenEqualizer={() => setIsEqualizerOpen(true)}
         onAddToPlaylist={() => {
           if (playerState.current_track?.video_id) {
             setSongToAddToPlaylist({
@@ -404,6 +419,12 @@ export const App: React.FC = () => {
         isOpen={isMobileVolumeOpen}
         onClose={() => setIsMobileVolumeOpen(false)}
         volume={playerState.volume}
+      />
+
+      {/* Equalizer & Audio Enhancer Modal */}
+      <EqualizerModal
+        isOpen={isEqualizerOpen}
+        onClose={() => setIsEqualizerOpen(false)}
       />
 
       {/* Add To Playlist Modal */}

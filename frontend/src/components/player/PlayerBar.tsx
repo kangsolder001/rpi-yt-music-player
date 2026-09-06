@@ -1,5 +1,4 @@
-import React from 'react';
-import { Music, Disc3 } from 'lucide-react';
+import { Music, Disc3, SlidersHorizontal } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { Controls } from './Controls';
 import { ProgressBar } from './ProgressBar';
@@ -7,9 +6,10 @@ import { VolumeSlider } from './VolumeSlider';
 
 interface PlayerBarProps {
   playerState: PlayerState;
+  onOpenEqualizer?: () => void;
 }
 
-export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState }) => {
+export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer }) => {
   const currentTrack = playerState.current_track;
   const hasTrack = Boolean(currentTrack && currentTrack.video_id);
 
@@ -60,8 +60,17 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState }) => {
         </div>
       </div>
 
-      {/* Hardware Volume Control (Right) */}
-      <div className="flex items-center justify-end gap-3 w-1/4">
+      {/* Hardware Volume & Equalizer (Right) */}
+      <div className="flex items-center justify-end gap-2.5 w-1/4">
+        {onOpenEqualizer && (
+          <button
+            onClick={onOpenEqualizer}
+            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition active:scale-95"
+            title="Equalizer & Sound Enhancer"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
+        )}
         <VolumeSlider volume={playerState.volume} />
       </div>
     </footer>

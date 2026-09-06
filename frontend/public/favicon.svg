@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="rpi-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#e11d48" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+  </defs>
+  <!-- Background Card -->
+  <rect width="64" height="64" rx="16" fill="url(#rpi-grad)"/>
+  
+  <!-- Stylized Music Note & Waveform -->
+  <path d="M26 40V22l16-4v18" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="21" cy="40" r="5" fill="#ffffff"/>
+  <circle cx="37" cy="36" r="5" fill="#ffffff"/>
+  
+  <!-- Audio Waves -->
+  <path d="M47 22c2.8 3 2.8 7.5 0 10.5" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  <path d="M53 18c5 5.5 5 13.5 0 19" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+</svg>

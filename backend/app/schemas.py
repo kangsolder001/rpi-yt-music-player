@@ -98,3 +98,16 @@ class SearchResultItem(BaseModel):
     duration: int = 0
     duration_text: Optional[str] = ""
 
+# --- Equalizer Schemas ---
+class EqualizerBand(BaseModel):
+    frequency: int
+    gain: int = Field(..., ge=-12, le=12)
+
+class EqualizerUpdateRequest(BaseModel):
+    bands: Optional[List[EqualizerBand]] = None
+    normalizer_enabled: Optional[bool] = None
+    stereo_widen: Optional[bool] = None
+
+class EqualizerPresetRequest(BaseModel):
+    preset: str
+

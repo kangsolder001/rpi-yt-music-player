@@ -16,6 +16,7 @@ import {
   Plus,
   Radio,
   CheckCircle2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { api } from '../../services/api';
@@ -25,6 +26,7 @@ interface MobileFullPlayerProps {
   onClose: () => void;
   playerState: PlayerState;
   onAddToPlaylist?: () => void;
+  onOpenEqualizer?: () => void;
 }
 
 export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
@@ -32,6 +34,7 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
   onClose,
   playerState,
   onAddToPlaylist,
+  onOpenEqualizer,
 }) => {
   if (!isOpen) return null;
 
@@ -106,17 +109,27 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
           </div>
         </div>
 
-        {onAddToPlaylist ? (
-          <button
-            onClick={onAddToPlaylist}
-            className="p-2 -mr-2 text-zinc-400 hover:text-white rounded-full bg-zinc-800/40 active:scale-95 transition"
-            title="Simpan ke Playlist"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-        ) : (
-          <div className="w-8" />
-        )}
+        <div className="flex items-center gap-1">
+          {onOpenEqualizer && (
+            <button
+              onClick={onOpenEqualizer}
+              className="p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-800/40 active:scale-95 transition"
+              title="Equalizer & Sound Enhancer"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+            </button>
+          )}
+
+          {onAddToPlaylist && (
+            <button
+              onClick={onAddToPlaylist}
+              className="p-2 text-zinc-400 hover:text-white rounded-full bg-zinc-800/40 active:scale-95 transition"
+              title="Simpan ke Playlist"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Album Artwork */}

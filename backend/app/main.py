@@ -29,6 +29,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting MPV daemon...")
     player_service.start_mpv_daemon()
 
+    # Apply saved equalizer & audio filters
+    try:
+        from backend.app.services.equalizer import equalizer_service
+        equalizer_service.apply_to_mpv(player_service)
+    except Exception as e:
+        logger.error("Failed to apply initial equalizer: %s", e)
+
     # Start periodic player state broadcast task
     broadcast_task = asyncio.create_task(ws_manager.start_periodic_broadcast())
 
