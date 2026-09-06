@@ -7,8 +7,14 @@ Web-based YouTube Music Player yang dirancang khusus untuk berjalan di **Raspber
 ## ✨ Fitur Utama
 
 * 🔊 **Hardware Audio Output (Raspberry Pi 3.5mm Jack):** Suara langsung keluar melalui speaker mini yang tercolok ke jack 3.5mm RPi tanpa memerlukan soundcard USB tambahan.
-* 🎚️ **Hardware ALSA Volume Control:** Slider volume mengontrol langsung level analog soundcard OS (`amixer`), sementara volume internal software dikunci 100% demi kualitas suara optimal dan bebas noise digital.
+* 🎚️ **Hardware ALSA Mapped Volume Control (`-M`):** Kontrol volume presisi dengan pemetaan logaritmik telinga manusia (`amixer -M`). Volume 30% terdengar lembut, 50% nyaman, dan 100% bertenaga tanpa drop drastis di angka 60%.
+* 🎛️ **Equalizer 5-Band & Dynamic Normalizer:** Pilihan preset audio (Bass Booster, Vocal Clarity, Rock, Electronic, Warm, Flat) serta Dynamic Audio Normalizer (`dynaudnorm`) untuk suara merata dan bebas clipping pada speaker mini USB.
 * ⚡ **Audio Engine Super Ringan (`mpv` + IPC Socket):** Menggunakan daemon `mpv` dengan IPC socket (< 150MB RAM), tanpa membebani Raspberry Pi dengan browser Chromium yang rakus resource.
+* 📻 **Autoplay Radio & Auto-Next Rekomendasi:** Saat lagu selesai diputar, sistem otomatis beralih ke lagu sejenis berikutnya dari kurasi ~50 trek YouTube Music Watch Playlist.
+* 📑 **Daftar Antrean Lagu (*Up Next / Play Queue*):** Lihat daftar lagu berikutnya secara lengkap dan lompat putar langsung (*click-to-play*) ke lagu mana pun di antrean.
+* 🌟 **Explore & Rekomendasi Lagu YouTube Music:** Rekomendasi lagu berdasarkan mood/genre (Populer, Akustik, Lo-Fi, Galau, Rock) dengan dukungan *infinite scroll* dan pemuatan berkelanjutan.
+* 🌡️ **Monitor Kesehatan Hardware Raspberry Pi 4:** Widget dan modal real-time memantau suhu prosesor (°C), penggunaan RAM, kapasitas MicroSD tersisa, CPU Load, dan waktu aktif (*uptime*).
+* 📱 **Desain Antarmuka Mobile-First PWA-Ready:** Bottom navigation bar, floating mini-player, full-screen now playing sheet dengan animasi vinyl spinning, dan modal volume sentuh.
 * 💾 **Offline Caching & Auto-Download:** Lagu yang dimasukkan ke playlist otomatis diunduh di latar belakang ke format audio `.m4a` lokal. Pemutaran lagu offline instan (0s buffer) tanpa perlu koneksi internet berulang.
 * 🧹 **Smart Disk Cleanup:** Menghapus lagu atau playlist akan otomatis membersihkan file `.m4a` terkait dari disk jika file tersebut tidak digunakan oleh playlist lain, menjaga penyimpanan microSD RPi tetap hemat.
 * 🔁 **Mode Repeat Lengkap:** Mendukung 3 mode pemutaran: Mati (`off`), Ulang Semua (`all`), dan Ulang Lagu Ini (`one`).
