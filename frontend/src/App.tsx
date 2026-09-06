@@ -9,6 +9,7 @@ import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { PlaylistDetail } from './components/playlist/PlaylistDetail';
 import { MobilePlaylistDirectory } from './components/playlist/MobilePlaylistDirectory';
 import { AddToPlaylistModal } from './components/playlist/AddToPlaylistModal';
+import { ImportPlaylistModal } from './components/playlist/ImportPlaylistModal';
 import { SearchBar } from './components/search/SearchBar';
 import { SearchResults } from './components/search/SearchResults';
 import { ExploreRecommendations } from './components/search/ExploreRecommendations';
@@ -45,6 +46,7 @@ export const App: React.FC = () => {
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isSystemHealthOpen, setIsSystemHealthOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Playlists state
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
@@ -330,6 +332,7 @@ export const App: React.FC = () => {
             onCreatePlaylist={handleCreatePlaylist}
             onDeletePlaylist={handleDeletePlaylist}
             onOpenSystemHealth={() => setIsSystemHealthOpen(true)}
+            onOpenImportModal={() => setIsImportModalOpen(true)}
           />
         </div>
 
@@ -404,6 +407,7 @@ export const App: React.FC = () => {
                     onCreatePlaylist={handleCreatePlaylist}
                     onDeletePlaylist={handleDeletePlaylist}
                     onPlayPlaylist={(id) => handlePlayAllInPlaylist(id)}
+                    onOpenImportModal={() => setIsImportModalOpen(true)}
                   />
                 </div>
               )}
@@ -503,6 +507,18 @@ export const App: React.FC = () => {
               .then(setCurrentPlaylistDetail)
               .catch(console.error);
           }
+        }}
+      />
+
+      {/* Import YouTube Playlist Modal */}
+      <ImportPlaylistModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={(newPlaylist) => {
+          loadPlaylists();
+          setSelectedPlaylistId(newPlaylist.id);
+          setCurrentPlaylistDetail(newPlaylist);
+          setCurrentView('playlist');
         }}
       />
     </div>

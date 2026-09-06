@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ListMusic, Trash2, Compass, Radio, Flame, Activity, HardDrive } from 'lucide-react';
+import { Plus, ListMusic, Trash2, Compass, Radio, Flame, Activity, HardDrive, ListPlus } from 'lucide-react';
 import { PlaylistSummary } from '../../types/playlist';
 import { SystemHealthResponse } from '../../types/system';
 import { api } from '../../services/api';
@@ -13,6 +13,7 @@ interface PlaylistSidebarProps {
   onCreatePlaylist: (name: string, description?: string) => Promise<void>;
   onDeletePlaylist: (id: number) => Promise<void>;
   onOpenSystemHealth?: () => void;
+  onOpenImportModal?: () => void;
 }
 
 export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
@@ -24,6 +25,7 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
   onCreatePlaylist,
   onDeletePlaylist,
   onOpenSystemHealth,
+  onOpenImportModal,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -76,13 +78,24 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
               <ListMusic className="w-3.5 h-3.5" />
               <span>Koleksi Playlist</span>
             </div>
-            <button
-              onClick={() => setIsCreating(true)}
-              className="p-1 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition"
-              title="Buat Playlist Baru"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {onOpenImportModal && (
+                <button
+                  onClick={onOpenImportModal}
+                  className="p-1 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition"
+                  title="Impor Playlist dari YouTube"
+                >
+                  <ListPlus className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsCreating(true)}
+                className="p-1 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition"
+                title="Buat Playlist Baru"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* New Playlist Form */}

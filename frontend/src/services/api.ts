@@ -227,6 +227,24 @@ export const api = {
     const res = await fetch(`${BASE_URL}/system/health`);
     if (!res.ok) throw new Error('Failed to fetch system health');
     return res.json();
+  },
+
+  // --- Import Playlist API ---
+  async importYouTubePlaylist(payload: {
+    url: string;
+    custom_name?: string;
+    max_songs?: number;
+  }): Promise<PlaylistDetail> {
+    const res = await fetch(`${BASE_URL}/playlists/import-youtube`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Gagal mengimpor playlist YouTube' }));
+      throw new Error(err.detail || 'Gagal mengimpor playlist YouTube');
+    }
+    return res.json();
   }
 };
 

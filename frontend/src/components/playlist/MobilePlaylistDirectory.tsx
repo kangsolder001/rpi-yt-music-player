@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Music, Play, Trash2, ListMusic, Sparkles } from 'lucide-react';
+import { Plus, Music, Play, Trash2, ListMusic, Sparkles, ListPlus } from 'lucide-react';
 import { PlaylistSummary } from '../../types/playlist';
 
 interface MobilePlaylistDirectoryProps {
@@ -8,6 +8,7 @@ interface MobilePlaylistDirectoryProps {
   onCreatePlaylist: (name: string, description?: string) => Promise<void>;
   onDeletePlaylist: (id: number) => Promise<void>;
   onPlayPlaylist?: (id: number) => void;
+  onOpenImportModal?: () => void;
 }
 
 export const MobilePlaylistDirectory: React.FC<MobilePlaylistDirectoryProps> = ({
@@ -16,6 +17,7 @@ export const MobilePlaylistDirectory: React.FC<MobilePlaylistDirectoryProps> = (
   onCreatePlaylist,
   onDeletePlaylist,
   onPlayPlaylist,
+  onOpenImportModal,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
@@ -44,13 +46,26 @@ export const MobilePlaylistDirectory: React.FC<MobilePlaylistDirectoryProps> = (
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-semibold rounded-xl shadow-lg shadow-red-600/30 transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Baru</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenImportModal && (
+            <button
+              onClick={onOpenImportModal}
+              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 text-xs font-semibold rounded-xl border border-zinc-700/80 transition"
+              title="Impor dari YouTube"
+            >
+              <ListPlus className="w-4 h-4 text-red-400" />
+              <span>Impor</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsCreating(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-semibold rounded-xl shadow-lg shadow-red-600/30 transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Baru</span>
+          </button>
+        </div>
       </div>
 
       {/* New Playlist Form */}

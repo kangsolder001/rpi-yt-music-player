@@ -8,9 +8,12 @@ from backend.app.schemas import SearchResultItem
 
 logger = logging.getLogger(__name__)
 
-# Regex patterns for extracting YouTube video ID
+# Regex patterns for extracting YouTube video ID & playlist ID
 YOUTUBE_URL_REGEX = re.compile(
     r"(?:https?:\/\/)?(?:www\.|music\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})"
+)
+PLAYLIST_URL_REGEX = re.compile(
+    r"[?&]list=([a-zA-Z0-9_-]+)"
 )
 
 RECOMMENDATION_CATEGORIES = {
@@ -43,6 +46,17 @@ class YTMusicService:
         match = YOUTUBE_URL_REGEX.search(url_or_id)
         if match:
             return match.group(1)
+        return None
+
+    @staticmethod
+    def extract_playlist_id(url_or_id: str) -> Optional[str]:
+        """Extract a playlist ID from a URL or validate an existing playlist ID."""
+        url_or_id = url_or_id.strip()
+        match = PLAYLIST_URL_REGEX.search(url_or_id)
+        if match:
+            return match.group(1)
+        if re.match(r"^[a-zA-Z0-9_-]{12,}$", url_or_id):
+            return url_or_id
         return None
 
     def search_songs(self, query: str, limit: int = 20, offset: int = 0) -> List[SearchResultItem]:
@@ -236,6 +250,108 @@ class YTMusicService:
 
         return results
 
+    def get_youtube_playlist(self, playlist_id: str, limit: int = 100) -> Dict[str, Any]:
+        """
+        Fetch playlist metadata and songs from YouTube Music,
+        with automatic fallback to yt-dlp.
+        """
+        clean_id = playlist_id.strip()
+        if clean_id.startswith("VL"):
+            clean_id = clean_id[2:]
+
+        title = "YouTube Playlist"
+        description = "Diimpor dari YouTube"
+        thumbnail_url = None
+        tracks: List[SearchResultItem] = []
+
+        # 1. Try ytmusicapi first
+        if self.ytm:
+            try:
+                res = self.ytm.get_playlist(clean_id, limit=limit)
+                title = res.get("title") or title
+                description = res.get("description") or description
+                thumbs = res.get("thumbnails", [])
+                if thumbs:
+                    thumbnail_url = thumbs[-1].get("url")
+
+                raw_tracks = res.get("tracks", [])
+                for item in raw_tracks[:limit]:
+                    v_id = item.get("videoId")
+                    if not v_id:
+                        continue
+                    t_title = item.get("title", "Unknown Title")
+                    artists_list = item.get("artists", [])
+                    t_artist = ", ".join([a.get("name", "") for a in artists_list if a.get("name")]) or "Unknown Artist"
+                    dur_sec = item.get("duration_seconds")
+                    if dur_sec is None:
+                        dur_text = item.get("duration") or ""
+                        dur_sec = self._parse_duration_text(dur_text) if dur_text else 0
+                    
+                    t_thumbs = item.get("thumbnails", [])
+                    t_thumb = t_thumbs[-1].get("url") if t_thumbs else None
+                    if not thumbnail_url and t_thumb:
+                        thumbnail_url = t_thumb
+
+                    tracks.append(SearchResultItem(
+                        video_id=v_id,
+                        title=t_title,
+                        artist=t_artist,
+                        thumbnail_url=t_thumb,
+                        duration=dur_sec,
+                        duration_text=f"{dur_sec // 60}:{dur_sec % 60:02d}"
+                    ))
+            except Exception as e:
+                logger.warning("ytmusicapi get_playlist failed for %s (%s). Falling back to yt-dlp.", clean_id, e)
+
+        # 2. Fallback to yt-dlp if no tracks fetched
+        if not tracks:
+            try:
+                import subprocess
+                import json
+                playlist_url = f"https://www.youtube.com/playlist?list={clean_id}"
+                cmd = [
+                    "yt-dlp",
+                    "--flat-playlist",
+                    "-J",
+                    "--playlist-end", str(limit),
+                    playlist_url
+                ]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
+                if proc.returncode == 0 and proc.stdout:
+                    data = json.loads(proc.stdout)
+                    title = data.get("title") or title
+                    description = data.get("description") or description
+                    entries = data.get("entries", [])
+                    for entry in entries:
+                        v_id = entry.get("id")
+                        if not v_id:
+                            continue
+                        t_title = entry.get("title", "Unknown Title")
+                        t_artist = entry.get("uploader") or entry.get("channel") or "Unknown Artist"
+                        dur_sec = int(entry.get("duration") or 0)
+                        t_thumb = entry.get("thumbnail") or f"https://i.ytimg.com/vi/{v_id}/hqdefault.jpg"
+                        if not thumbnail_url and t_thumb:
+                            thumbnail_url = t_thumb
+
+                        tracks.append(SearchResultItem(
+                            video_id=v_id,
+                            title=t_title,
+                            artist=t_artist,
+                            thumbnail_url=t_thumb,
+                            duration=dur_sec,
+                            duration_text=f"{dur_sec // 60}:{dur_sec % 60:02d}"
+                        ))
+            except Exception as e:
+                logger.error("yt-dlp playlist extraction failed for %s: %s", clean_id, e)
+
+        return {
+            "playlist_id": clean_id,
+            "title": title,
+            "description": description,
+            "thumbnail_url": thumbnail_url,
+            "tracks": tracks
+        }
+
     @staticmethod
     def _parse_duration_text(duration_text: str) -> int:
         """Parse 'MM:SS' or 'HH:MM:SS' into seconds."""
@@ -250,4 +366,5 @@ class YTMusicService:
         return 0
 
 ytmusic_service = YTMusicService()
+
 

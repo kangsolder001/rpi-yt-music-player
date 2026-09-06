@@ -130,3 +130,9 @@ class QueueResponse(BaseModel):
     total: int
     items: List[QueueItem]
 
+# --- Import Playlist Schema ---
+class ImportPlaylistRequest(BaseModel):
+    url: str
+    custom_name: Optional[str] = None
+    max_songs: Optional[int] = 100
+

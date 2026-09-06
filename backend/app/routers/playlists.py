@@ -11,7 +11,8 @@ from backend.app.schemas import (
     PlaylistResponse, 
     PlaylistDetailResponse, 
     SongCreate, 
-    SongResponse
+    SongResponse,
+    ImportPlaylistRequest
 )
 from backend.app.services.ytmusic import ytmusic_service
 from backend.app.services.downloader import downloader_service
@@ -199,4 +200,55 @@ def remove_song_from_playlist(playlist_id: int, song_id: int, db: Session = Depe
         downloader_service.delete_local_file(video_id)
 
     return {"message": "Song removed from playlist", "song_id": song_id}
+
+@router.post("/import-youtube", response_model=PlaylistDetailResponse)
+def import_youtube_playlist(payload: ImportPlaylistRequest, db: Session = Depends(get_db)):
+    """Import an entire YouTube or YouTube Music playlist into local SQLite."""
+    url = payload.url.strip()
+    playlist_id = ytmusic_service.extract_playlist_id(url)
+    if not playlist_id:
+        raise HTTPException(
+            status_code=400,
+            detail="URL atau ID Playlist YouTube tidak valid. Contoh format: https://music.youtube.com/playlist?list=PL..."
+        )
+    
+    max_songs = min(max(1, payload.max_songs or 100), 200)
+    data = ytmusic_service.get_youtube_playlist(playlist_id, limit=max_songs)
+    
+    tracks = data.get("tracks", [])
+    if not tracks:
+        raise HTTPException(
+            status_code=404,
+            detail="Tidak dapat menemukan lagu pada playlist YouTube ini. Pastikan playlist bersifat Publik atau Unlisted."
+        )
+    
+    # Determine playlist name & description
+    name = (payload.custom_name or "").strip() or data.get("title") or "YouTube Playlist"
+    desc = data.get("description") or f"Diimpor dari YouTube Playlist ({len(tracks)} lagu)"
+
+    # 1. Create Playlist
+    playlist = Playlist(name=name, description=desc)
+    db.add(playlist)
+    db.commit()
+    db.refresh(playlist)
+
+    # 2. Add songs to PlaylistSong
+    for idx, t in enumerate(tracks):
+        song = PlaylistSong(
+            playlist_id=playlist.id,
+            video_id=t.video_id,
+            title=t.title,
+            artist=t.artist,
+            thumbnail_url=t.thumbnail_url,
+            duration=t.duration,
+            order_index=idx + 1,
+            download_status="pending"
+        )
+        db.add(song)
+
+    db.commit()
+    db.refresh(playlist)
+
+    return playlist
+
 
