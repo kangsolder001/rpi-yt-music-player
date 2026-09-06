@@ -1,11 +1,12 @@
 import React from 'react';
-import { Play, Plus, Music, Sparkles } from 'lucide-react';
+import { Play, Plus, Music, Sparkles, ArrowLeft } from 'lucide-react';
 import { SearchResult } from '../../types/player';
 
 interface SearchResultsProps {
   results: SearchResult[];
   onPlaySong: (song: SearchResult) => void;
   onAddToPlaylist: (song: SearchResult) => void;
+  onClearSearch?: () => void;
   currentVideoId?: string | null;
 }
 
@@ -13,6 +14,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   results,
   onPlaySong,
   onAddToPlaylist,
+  onClearSearch,
   currentVideoId,
 }) => {
   const formatTime = (seconds: number): string => {
@@ -22,25 +24,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (results.length === 0) {
-    return (
-      <div className="text-center py-20 px-4 text-zinc-500 space-y-3">
-        <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-600">
-          <Sparkles className="w-6 h-6" />
-        </div>
-        <div className="text-sm font-medium text-zinc-400">Siap Menemukan Musik</div>
-        <p className="text-xs text-zinc-600 max-w-sm mx-auto">
-          Cari judul lagu, artis, atau tempel link YouTube pada kolom pencarian di atas.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-1 pb-24">
-      <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-zinc-400 border-b border-zinc-800 uppercase tracking-wider">
-        <span>Hasil Pencarian ({results.length})</span>
-        <span>Aksi</span>
+    <div className="space-y-3 pb-24">
+      <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+        <div className="flex items-center gap-2">
+          {onClearSearch && (
+            <button
+              onClick={onClearSearch}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white active:scale-95 transition"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Rekomendasi</span>
+            </button>
+          )}
+          <span className="text-xs font-bold text-zinc-300">
+            Hasil Pencarian ({results.length})
+          </span>
+        </div>
+        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Aksi</span>
       </div>
 
       <div className="divide-y divide-zinc-800/40">

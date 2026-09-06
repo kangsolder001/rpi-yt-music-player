@@ -1,6 +1,7 @@
 import re
+import time
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from ytmusicapi import YTMusic
 import yt_dlp
 from backend.app.schemas import SearchResultItem
@@ -12,6 +13,14 @@ YOUTUBE_URL_REGEX = re.compile(
     r"(?:https?:\/\/)?(?:www\.|music\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})"
 )
 
+RECOMMENDATION_CATEGORIES = {
+    "trending": {"title": "Populer Hari Ini", "query": "Top Hits Indonesia 2024", "emoji": "🔥"},
+    "relax": {"title": "Santai & Akustik", "query": "Lagu Akustik Indonesia Santai", "emoji": "☕"},
+    "focus": {"title": "Fokus & Lo-Fi", "query": "Lofi Chill Beats Study", "emoji": "🎧"},
+    "galau": {"title": "Galau & Nostalgia", "query": "Lagu Pop Indo Galau Terbaik", "emoji": "🌧️"},
+    "energetic": {"title": "Semangat & Rock", "query": "Lagu Rock Pop Indo Energetic", "emoji": "⚡"},
+}
+
 class YTMusicService:
     """Service to search YouTube Music and resolve video metadata."""
 
@@ -21,6 +30,7 @@ class YTMusicService:
         except Exception as e:
             logger.warning("Could not initialize unauthenticated YTMusic: %s", e)
             self.ytm = None
+        self._rec_cache: Dict[str, Tuple[float, List[SearchResultItem]]] = {}
 
     @staticmethod
     def extract_video_id(url_or_id: str) -> Optional[str]:
@@ -75,6 +85,41 @@ class YTMusicService:
             logger.error("Error searching YouTube Music for '%s': %s", query, e)
 
         return results
+
+    def get_recommendations(self, category: Optional[str] = "trending", limit: int = 15) -> Dict[str, Any]:
+        """Get curated recommendation songs by category (with in-memory TTL caching)."""
+        cat_key = category if category in RECOMMENDATION_CATEGORIES else "trending"
+        cat_info = RECOMMENDATION_CATEGORIES[cat_key]
+
+        now = time.time()
+        if cat_key in self._rec_cache:
+            cache_time, items = self._rec_cache[cat_key]
+            if now - cache_time < 3600 and items:
+                return {
+                    "category": cat_key,
+                    "title": cat_info["title"],
+                    "emoji": cat_info["emoji"],
+                    "items": items,
+                    "categories": [
+                        {"id": k, "title": v["title"], "emoji": v["emoji"]}
+                        for k, v in RECOMMENDATION_CATEGORIES.items()
+                    ]
+                }
+
+        items = self.search_songs(cat_info["query"], limit=limit)
+        if items:
+            self._rec_cache[cat_key] = (now, items)
+
+        return {
+            "category": cat_key,
+            "title": cat_info["title"],
+            "emoji": cat_info["emoji"],
+            "items": items,
+            "categories": [
+                {"id": k, "title": v["title"], "emoji": v["emoji"]}
+                for k, v in RECOMMENDATION_CATEGORIES.items()
+            ]
+        }
 
     def get_track_info(self, video_id_or_url: str) -> Optional[Dict[str, Any]]:
         """Get metadata for a single track by video ID or URL."""

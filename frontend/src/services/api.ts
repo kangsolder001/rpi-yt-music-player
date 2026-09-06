@@ -1,4 +1,4 @@
-import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand } from '../types/player';
+import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand, RecommendationResponse } from '../types/player';
 import { PlaylistDetail, PlaylistSummary, CreatePlaylistInput, AddSongInput, PlaylistSong } from '../types/playlist';
 
 const BASE_URL = '/api';
@@ -180,6 +180,16 @@ export const api = {
       body: JSON.stringify({ preset }),
     });
     if (!res.ok) throw new Error('Failed to apply preset');
+    return res.json();
+  },
+
+  // --- Recommendations API ---
+  async getRecommendations(category?: string): Promise<RecommendationResponse> {
+    const url = category
+      ? `${BASE_URL}/search/recommendations?category=${encodeURIComponent(category)}`
+      : `${BASE_URL}/search/recommendations`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch recommendations');
     return res.json();
   }
 };

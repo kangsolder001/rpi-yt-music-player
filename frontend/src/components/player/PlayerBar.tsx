@@ -7,9 +7,10 @@ import { VolumeSlider } from './VolumeSlider';
 interface PlayerBarProps {
   playerState: PlayerState;
   onOpenEqualizer?: () => void;
+  onOpenVolume?: () => void;
 }
 
-export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer }) => {
+export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer, onOpenVolume }) => {
   const currentTrack = playerState.current_track;
   const hasTrack = Boolean(currentTrack && currentTrack.video_id);
 
@@ -71,7 +72,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualiz
             <SlidersHorizontal className="w-4 h-4" />
           </button>
         )}
-        <VolumeSlider volume={playerState.volume} />
+        <VolumeSlider volume={playerState.volume} onOpenVolumeModal={onOpenVolume} />
       </div>
     </footer>
   );

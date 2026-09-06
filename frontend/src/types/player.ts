@@ -46,3 +46,17 @@ export interface EqualizerState {
   available_presets: Record<string, PresetInfo>;
 }
 
+export interface RecommendationCategory {
+  id: string;
+  title: string;
+  emoji: string;
+}
+
+export interface RecommendationResponse {
+  category: string;
+  title: string;
+  emoji: string;
+  items: SearchResult[];
+  categories: RecommendationCategory[];
+}
+

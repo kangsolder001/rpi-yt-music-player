@@ -40,7 +40,7 @@ export const MobilePlaylistDirectory: React.FC<MobilePlaylistDirectoryProps> = (
             <span>Koleksi Playlist</span>
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Daftar putar tersimpan di database SQLite lokal
+            Daftar putar tersimpan di penyimpanan lokal
           </p>
         </div>
 

@@ -51,7 +51,7 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
           </div>
           <div>
             <span className="text-[11px] font-bold text-red-500 uppercase tracking-wider">
-              Playlist SQLite
+              Playlist
             </span>
             <h2 className="text-xl sm:text-3xl font-extrabold text-zinc-100 mt-1 leading-tight">
               {playlist.name}

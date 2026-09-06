@@ -60,7 +60,7 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
           <div className="flex items-center justify-between px-3 mb-2">
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
               <ListMusic className="w-3.5 h-3.5" />
-              <span>Playlists (SQLite)</span>
+              <span>Koleksi Playlist</span>
             </div>
             <button
               onClick={() => setIsCreating(true)}

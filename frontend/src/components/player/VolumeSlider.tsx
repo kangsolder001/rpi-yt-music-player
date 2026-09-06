@@ -4,9 +4,10 @@ import { api } from '../../services/api';
 
 interface VolumeSliderProps {
   volume: number;
+  onOpenVolumeModal?: () => void;
 }
 
-export const VolumeSlider: React.FC<VolumeSliderProps> = ({ volume }) => {
+export const VolumeSlider: React.FC<VolumeSliderProps> = ({ volume, onOpenVolumeModal }) => {
   const [localVolume, setLocalVolume] = useState<number>(volume);
   const [lastVolume, setLastVolume] = useState<number>(volume || 75);
 
@@ -60,9 +61,19 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({ volume }) => {
         className="w-16 sm:w-24 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
       />
 
-      <span className="text-xs font-mono font-semibold text-zinc-300 w-9 text-right">
-        {localVolume}%
-      </span>
+      {onOpenVolumeModal ? (
+        <button
+          onClick={onOpenVolumeModal}
+          className="text-xs font-mono font-bold text-zinc-300 hover:text-emerald-400 hover:bg-zinc-800 px-1.5 py-0.5 rounded transition cursor-pointer"
+          title="Klik untuk membuka preset & kontrol volume spesifik"
+        >
+          {localVolume}%
+        </button>
+      ) : (
+        <span className="text-xs font-mono font-semibold text-zinc-300 w-9 text-right">
+          {localVolume}%
+        </span>
+      )}
     </div>
   );
 };

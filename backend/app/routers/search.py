@@ -26,3 +26,8 @@ def resolve_youtube_url(url: str = Query(..., description="YouTube video URL or 
         duration_text=f"{info.get('duration', 0) // 60}:{info.get('duration', 0) % 60:02d}"
     )
 
+@router.get("/recommendations")
+def get_recommendations(category: Optional[str] = Query(None, description="Category id, e.g. trending, relax, focus")):
+    """Get curated music recommendations and moods."""
+    return ytmusic_service.get_recommendations(category=category)
+

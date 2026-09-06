@@ -11,6 +11,7 @@ import { MobilePlaylistDirectory } from './components/playlist/MobilePlaylistDir
 import { AddToPlaylistModal } from './components/playlist/AddToPlaylistModal';
 import { SearchBar } from './components/search/SearchBar';
 import { SearchResults } from './components/search/SearchResults';
+import { ExploreRecommendations } from './components/search/ExploreRecommendations';
 import { PlayerBar } from './components/player/PlayerBar';
 import { MiniPlayer } from './components/player/MiniPlayer';
 import { MobileFullPlayer } from './components/player/MobileFullPlayer';
@@ -311,25 +312,27 @@ export const App: React.FC = () => {
           {/* VIEW 1: EXPLORE & SEARCH */}
           {currentView === 'explore' && (
             <div className="p-4 sm:p-6 flex-1 pb-32 md:pb-6">
-              <div className="mb-4">
-                <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-100 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-red-500" />
-                  <span>Jelajahi & Cari Musik</span>
-                </h2>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Cari lagu di YouTube Music atau masukkan link lagu langsung untuk diputar lewat speaker Raspberry Pi.
-                </p>
-              </div>
-
-              <SearchResults
-                results={searchResults}
-                currentVideoId={playerState.current_track?.video_id}
-                onPlaySong={handlePlaySongFromSearch}
-                onAddToPlaylist={(song) => {
-                  setSongToAddToPlaylist(song);
-                  setIsAddModalOpen(true);
-                }}
-              />
+              {searchResults.length > 0 ? (
+                <SearchResults
+                  results={searchResults}
+                  currentVideoId={playerState.current_track?.video_id}
+                  onPlaySong={handlePlaySongFromSearch}
+                  onAddToPlaylist={(song) => {
+                    setSongToAddToPlaylist(song);
+                    setIsAddModalOpen(true);
+                  }}
+                  onClearSearch={() => setSearchResults([])}
+                />
+              ) : (
+                <ExploreRecommendations
+                  currentVideoId={playerState.current_track?.video_id}
+                  onPlaySong={handlePlaySongFromSearch}
+                  onAddToPlaylist={(song) => {
+                    setSongToAddToPlaylist(song);
+                    setIsAddModalOpen(true);
+                  }}
+                />
+              )}
             </div>
           )}
 
@@ -373,6 +376,7 @@ export const App: React.FC = () => {
       <PlayerBar
         playerState={playerState}
         onOpenEqualizer={() => setIsEqualizerOpen(true)}
+        onOpenVolume={() => setIsMobileVolumeOpen(true)}
       />
 
       {/* Mobile Floating Mini Player (Visible above BottomNav when track exists) */}
