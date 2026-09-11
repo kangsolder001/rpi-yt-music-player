@@ -2,6 +2,7 @@ import re
 import shutil
 import subprocess
 import logging
+import time
 from backend.app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,8 @@ class AudioMixerService:
         self.card = settings.ALSA_CARD
         self.amixer_bin = shutil.which("amixer")
         self._cached_volume = 75
+        self._last_read_time = 0.0
+        self._cache_ttl = 3.0
 
         if not self.amixer_bin:
             logger.warning("amixer binary not found. Hardware volume control will use simulation mode.")
@@ -22,6 +25,7 @@ class AudioMixerService:
         """Set hardware ALSA volume percentage (0 to 100)."""
         volume = max(0, min(100, volume))
         self._cached_volume = volume
+        self._last_read_time = time.time()
 
         if not self.amixer_bin:
             return self._cached_volume
@@ -54,6 +58,10 @@ class AudioMixerService:
         if not self.amixer_bin:
             return self._cached_volume
 
+        now = time.time()
+        if now - self._last_read_time < self._cache_ttl:
+            return self._cached_volume
+
         for cmd in [
             [self.amixer_bin, "-M", "-c", self.card, "sget", self.control],
             [self.amixer_bin, "-M", "sget", self.control],
@@ -67,10 +75,12 @@ class AudioMixerService:
                 match = re.search(r"\[(\d+)%\]", res.stdout)
                 if match:
                     self._cached_volume = int(match.group(1))
+                    self._last_read_time = now
                     return self._cached_volume
             except Exception:
                 continue
 
+        self._last_read_time = now
         return self._cached_volume
 
 audio_mixer = AudioMixerService()

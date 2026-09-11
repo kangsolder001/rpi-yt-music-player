@@ -9,7 +9,32 @@
     <title>RPi Music Box</title>
   </head>
   <body class="bg-zinc-950 text-zinc-100 antialiased selection:bg-red-500 selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background-color:#09090b; color:#f4f4f5; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align:center; padding:20px; user-select:none;">
+        <div style="position:relative; width:64px; height:64px; margin-bottom:20px;">
+          <div style="width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg, #ef4444, #991b1b); display:flex; align-items:center; justify-content:center; box-shadow:0 0 35px rgba(239,68,68,0.45); animation:rpiPulse 1.8s ease-in-out infinite;">
+            <svg style="width:32px; height:32px; fill:white;" viewBox="0 0 24 24">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+          </div>
+        </div>
+        <h1 style="font-size:20px; font-weight:800; margin:0 0 6px 0; letter-spacing:-0.02em; color:#fff;">RPi Music Box</h1>
+        <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#a1a1aa;">
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background-color:#10b981; animation:rpiBlink 1.4s infinite;"></span>
+          <span>Menghubungkan ke pemutar musik...</span>
+        </div>
+        <style>
+          @keyframes rpiPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.06); opacity: 0.88; }
+          }
+          @keyframes rpiBlink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+          }
+        </style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

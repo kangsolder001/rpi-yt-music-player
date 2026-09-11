@@ -2,7 +2,7 @@ import os
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -38,6 +38,13 @@ async def lifespan(app: FastAPI):
 
     # Start periodic player state broadcast task
     broadcast_task = asyncio.create_task(ws_manager.start_periodic_broadcast())
+
+    # Pre-warm trending recommendations cache in background
+    try:
+        from backend.app.services.ytmusic import ytmusic_service
+        asyncio.create_task(asyncio.to_thread(ytmusic_service.get_recommendations, "trending"))
+    except Exception as e:
+        logger.warning("Failed to pre-warm recommendations: %s", e)
 
     logger.info("%s ready!", settings.APP_NAME)
     yield
@@ -82,11 +89,24 @@ def healthcheck():
 if settings.STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(settings.STATIC_DIR / "assets")), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     async def serve_spa(full_path: str):
-        index_file = settings.STATIC_DIR / "index.html"
+        # Return 404 for missing API or asset routes to avoid serving HTML
+        if full_path.startswith("api/") or full_path.startswith("assets/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+
         file_path = settings.STATIC_DIR / full_path
         if file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(index_file)
+            headers = {"Cache-Control": "public, max-age=31536000, immutable"} if "/assets/" in str(file_path) else None
+            return FileResponse(file_path, headers=headers)
+
+        index_file = settings.STATIC_DIR / "index.html"
+        return FileResponse(
+            index_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
 

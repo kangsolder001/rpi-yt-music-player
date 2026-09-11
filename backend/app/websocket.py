@@ -45,7 +45,7 @@ class ConnectionManager:
         """Periodically query MPV status and broadcast to clients."""
         while True:
             try:
-                player_service.update_status_from_mpv()
+                await asyncio.to_thread(player_service.update_status_from_mpv)
                 if self.active_connections:
                     await self.broadcast_state()
             except Exception as e:
