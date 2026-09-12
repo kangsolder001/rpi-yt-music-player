@@ -174,13 +174,14 @@ export const App: React.FC = () => {
 
   const handlePlaySongFromSearch = async (song: SearchResult) => {
     try {
-      await api.playSong({
+      const state = await api.playSong({
         video_id: song.video_id,
         title: song.title,
         artist: song.artist,
         thumbnail_url: song.thumbnail_url,
         duration: song.duration,
       });
+      setPlayerState(state);
     } catch (e) {
       console.error(e);
     }
@@ -190,7 +191,8 @@ export const App: React.FC = () => {
     const targetId = playlistId || selectedPlaylistId;
     if (!targetId) return;
     try {
-      await api.playPlaylist(targetId, 0);
+      const state = await api.playPlaylist(targetId, 0);
+      setPlayerState(state);
     } catch (e) {
       console.error(e);
     }
@@ -199,7 +201,8 @@ export const App: React.FC = () => {
   const handlePlaySongInPlaylist = async (startIndex: number) => {
     if (!selectedPlaylistId) return;
     try {
-      await api.playPlaylist(selectedPlaylistId, startIndex);
+      const state = await api.playPlaylist(selectedPlaylistId, startIndex);
+      setPlayerState(state);
     } catch (e) {
       console.error(e);
     }

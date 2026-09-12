@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Link2, Plus, Loader2 } from 'lucide-react';
 import { PlaylistSummary } from '../../types/playlist';
 import { SearchResult } from '../../types/player';
@@ -26,11 +26,23 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sync selected playlist to the first option when modal opens or playlists load
+  useEffect(() => {
+    if (isOpen && playlists.length > 0) {
+      if (!selectedPlaylistId || !playlists.some((p) => p.id === selectedPlaylistId)) {
+        setSelectedPlaylistId(playlists[0].id);
+      }
+      setError(null);
+      setUrlInput('');
+    }
+  }, [isOpen, playlists]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlaylistId) {
+    const targetPlaylistId = selectedPlaylistId || (playlists.length > 0 ? playlists[0].id : 0);
+    if (!targetPlaylistId) {
       setError('Pilih playlist tujuan terlebih dahulu');
       return;
     }
@@ -40,7 +52,7 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
 
     try {
       if (prefilledSong) {
-        await api.addSongToPlaylist(selectedPlaylistId, {
+        await api.addSongToPlaylist(targetPlaylistId, {
           video_id: prefilledSong.video_id,
           title: prefilledSong.title,
           artist: prefilledSong.artist,
@@ -53,7 +65,7 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
           setLoading(false);
           return;
         }
-        await api.addSongToPlaylist(selectedPlaylistId, {
+        await api.addSongToPlaylist(targetPlaylistId, {
           video_id: urlInput.trim(),
         });
       }
@@ -127,17 +139,23 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
             <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
               Pilih Playlist Tujuan
             </label>
-            <select
-              value={selectedPlaylistId}
-              onChange={(e) => setSelectedPlaylistId(Number(e.target.value))}
-              className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-700 rounded-xl text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              {playlists.map((pl) => (
-                <option key={pl.id} value={pl.id}>
-                  {pl.name} ({pl.song_count} lagu)
-                </option>
-              ))}
-            </select>
+            {playlists.length === 0 ? (
+              <p className="text-xs text-amber-400 bg-amber-950/40 border border-amber-800/60 p-3 rounded-xl">
+                Belum ada playlist. Silakan buat playlist terlebih dahulu di menu Playlists.
+              </p>
+            ) : (
+              <select
+                value={selectedPlaylistId || playlists[0]?.id || ''}
+                onChange={(e) => setSelectedPlaylistId(Number(e.target.value))}
+                className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-700 rounded-xl text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                {playlists.map((pl) => (
+                  <option key={pl.id} value={pl.id}>
+                    {pl.name} ({pl.song_count} lagu)
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">

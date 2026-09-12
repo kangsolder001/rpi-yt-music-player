@@ -117,7 +117,16 @@ class MPVPlayerService:
             client.close()
 
             if response_data:
-                return json.loads(response_data.decode("utf-8").strip().split("\n")[0])
+                for line in response_data.decode("utf-8", errors="ignore").split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        parsed = json.loads(line)
+                        if "error" in parsed or "data" in parsed:
+                            return parsed
+                    except json.JSONDecodeError:
+                        continue
         except Exception as e:
             logger.debug("MPV IPC send error for %s: %s", cmd, e)
 
@@ -182,7 +191,9 @@ class MPVPlayerService:
                 self._executor.submit(self._queue_related_tracks, video_id)
 
         if not self.simulated:
+            self._send_command(["set_property", "pause", False])
             self._send_command(["loadfile", playback_target, "replace"])
+            self._send_command(["set_property", "pause", False])
 
     def _queue_related_tracks(self, seed_video_id: str):
         """Fetch similar recommended tracks and append to radio queue."""
@@ -422,14 +433,16 @@ class MPVPlayerService:
 
             # Detect genuine track completion
             if (was_playing or is_eof) and (now_idle or is_eof):
-                # Ensure it's not a false positive during initial stream startup (must be > 4s since play initiated)
-                if (time.time() - self._last_play_time > 4.0) and (self._current_time > 5.0 or is_eof):
+                # Ensure it's not a false positive during initial stream startup (must be > 6s since play initiated)
+                if (time.time() - self._last_play_time > 6.0) and (self._current_time > 5.0 or is_eof):
                     logger.info("Track finished naturally (duration: %s, pos: %s, EOF: %s). Advancing to next track.", self._duration, self._current_time, is_eof)
                     self._is_idle = True
                     self.next_track(force_next=False)
                     return
 
-            self._is_idle = now_idle
+            # Avoid false idle during stream buffering startup
+            if not (now_idle and (time.time() - self._last_play_time < 6.0)):
+                self._is_idle = now_idle
 
     def get_state(self) -> PlayerState:
         """Get current player state combined with ALSA volume."""
