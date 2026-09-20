@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Build Frontend (Static SPA)
 # ==========================================
-FROM node:20-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
 
 WORKDIR /build
 COPY frontend/package*.json ./

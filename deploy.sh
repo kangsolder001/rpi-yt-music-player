@@ -25,7 +25,13 @@ fi
 
 IMAGE_NAME="${IMAGE_NAME:-rpi-yt-music-player:latest}"
 TARGET_PLATFORM="${TARGET_PLATFORM:-linux/arm64}"
-REMOTE_DIR="${REMOTE_DIR:-~/rpi-yt-music-player}"
+REMOTE_DIR="${REMOTE_DIR:-rpi-yt-music-player}"
+# Normalize REMOTE_DIR: strip leading ~/ or local home directory prefix
+if [[ "$REMOTE_DIR" =~ ^~/(.*) ]]; then
+  REMOTE_DIR="${BASH_REMATCH[1]}"
+elif [[ "$REMOTE_DIR" == "$HOME"* ]]; then
+  REMOTE_DIR="${REMOTE_DIR#$HOME/}"
+fi
 TEMP_TAR="/tmp/rpi-yt-music-player.tar.gz"
 
 # Raspberry Pi target: argument 1 > .env PI_TARGET

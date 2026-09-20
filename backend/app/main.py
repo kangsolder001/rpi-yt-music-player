@@ -97,7 +97,12 @@ if settings.STATIC_DIR.exists():
 
         file_path = settings.STATIC_DIR / full_path
         if file_path.exists() and file_path.is_file():
-            headers = {"Cache-Control": "public, max-age=31536000, immutable"} if "/assets/" in str(file_path) else None
+            if full_path in ("sw.js", "manifest.webmanifest"):
+                headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+            elif "/assets/" in str(file_path):
+                headers = {"Cache-Control": "public, max-age=31536000, immutable"}
+            else:
+                headers = None
             return FileResponse(file_path, headers=headers)
 
         index_file = settings.STATIC_DIR / "index.html"

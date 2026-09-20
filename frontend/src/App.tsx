@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, Sparkles, Plus, Compass, ListMusic, SlidersHorizontal } from 'lucide-react';
+import { Radio, Sparkles, Plus, Compass, ListMusic, SlidersHorizontal, Download } from 'lucide-react';
 import { PlayerState, SearchResult } from './types/player';
 import { PlaylistDetail as PlaylistDetailType, PlaylistSummary } from './types/playlist';
 import { api } from './services/api';
 import { playerWs } from './services/websocket';
+import { useMediaSession } from './hooks/useMediaSession';
 
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { PlaylistDetail } from './components/playlist/PlaylistDetail';
@@ -66,6 +67,36 @@ export const App: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<SearchResult | null>(null);
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
+  // Integrate Media Session API (Lock Screen Controls, Bluetooth media keys, and mobile keepalive)
+  useMediaSession(playerState);
+
+  // PWA Install prompt handling
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        setInstallPrompt(null);
+      }
+    } catch (e) {
+      console.error('PWA install prompt error:', e);
+    }
+  };
 
   // Initial load & WebSocket subscription
   useEffect(() => {
@@ -334,6 +365,18 @@ export const App: React.FC = () => {
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-2">
+          {installPrompt && (
+            <button
+              onClick={handleInstallApp}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 text-white rounded-xl transition text-xs font-semibold shadow-md shadow-red-500/20"
+              title="Pasang aplikasi ke layar utama (Install Web App)"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Install App</span>
+              <span className="sm:hidden">Install</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsEqualizerOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 rounded-xl transition text-xs font-semibold shadow-sm"
