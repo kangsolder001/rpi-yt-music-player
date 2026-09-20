@@ -23,6 +23,7 @@ import { QueueModal } from './components/player/QueueModal';
 import { SystemHealthModal } from './components/system/SystemHealthModal';
 import { SleepTimerModal } from './components/player/SleepTimerModal';
 import { BottomNav } from './components/navigation/BottomNav';
+import { AmbienceView } from './components/ambience/AmbienceView';
 
 export const App: React.FC = () => {
   // Player state
@@ -40,7 +41,7 @@ export const App: React.FC = () => {
   });
 
   // Views & Navigation
-  const [currentView, setCurrentView] = useState<'explore' | 'playlist'>('explore');
+  const [currentView, setCurrentView] = useState<'explore' | 'playlist' | 'ambience'>('explore');
 
   // Mobile & Audio Modals
   const [isMobileFullPlayerOpen, setIsMobileFullPlayerOpen] = useState(false);
@@ -284,6 +285,18 @@ export const App: React.FC = () => {
     }
   };
 
+  const handlePlayAmbience = async (id: string) => {
+    setLoadingTrackId(`ambience_${id}`);
+    try {
+      const state = await api.playAmbience(id);
+      setPlayerState(state);
+    } catch (e) {
+      console.error('Failed to play ambience:', e);
+    } finally {
+      setLoadingTrackId(null);
+    }
+  };
+
   const handleRemoveSongFromPlaylist = async (songId: number) => {
     if (!selectedPlaylistId) return;
     try {
@@ -420,6 +433,9 @@ export const App: React.FC = () => {
             onSelectExplore={() => {
               setCurrentView('explore');
             }}
+            onSelectAmbience={() => {
+              setCurrentView('ambience');
+            }}
             onCreatePlaylist={handleCreatePlaylist}
             onDeletePlaylist={handleDeletePlaylist}
             onOpenSystemHealth={() => setIsSystemHealthOpen(true)}
@@ -506,6 +522,16 @@ export const App: React.FC = () => {
               )}
             </>
           )}
+
+          {/* VIEW 3: AMBIENCE & WHITE NOISE */}
+          {currentView === 'ambience' && (
+            <AmbienceView
+              playerState={playerState}
+              onPlayAmbience={handlePlayAmbience}
+              onOpenSleepTimer={() => setIsSleepTimerOpen(true)}
+              loadingId={loadingTrackId?.startsWith('ambience_') ? loadingTrackId.replace('ambience_', '') : null}
+            />
+          )}
         </main>
       </div>
 
@@ -528,6 +554,7 @@ export const App: React.FC = () => {
       <BottomNav
         currentView={currentView}
         onSelectExplore={() => setCurrentView('explore')}
+        onSelectAmbience={() => setCurrentView('ambience')}
         onSelectPlaylist={() => {
           setCurrentView('playlist');
         }}

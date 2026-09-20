@@ -293,12 +293,55 @@ class MPVPlayerService:
         """Set repeat mode: 'off', 'all', 'one'."""
         if mode in ("off", "all", "one"):
             self.repeat_mode = mode
+            if not self.simulated:
+                self._send_command(["set_property", "loop-file", "inf" if mode == "one" else "no"])
             logger.info("Repeat mode set to: %s", mode)
 
     def set_autoplay(self, enabled: bool):
         """Enable or disable autoplay of similar recommended tracks."""
         self.autoplay = enabled
         logger.info("Autoplay set to: %s", enabled)
+
+    def play_ambience(
+        self,
+        ambience_id: str,
+        title: str,
+        file_path: str,
+        artist: str = "Ambience & Sleep",
+        thumbnail_url: Optional[str] = None,
+        duration: int = 0
+    ):
+        """Play a local ambient soundscape in seamless infinite loop."""
+        logger.info("Playing local ambience soundscape: %s (%s)", title, file_path)
+        self._current_track = TrackInfo(
+            video_id=f"ambience_{ambience_id}",
+            title=title,
+            artist=artist,
+            thumbnail_url=thumbnail_url,
+            duration=float(duration)
+        )
+        self._current_playlist_id = None
+        self._is_paused = False
+        self._is_idle = False
+        self._current_time = 0.0
+        self._duration = float(duration)
+        self._last_play_time = time.time()
+        self.repeat_mode = "one"  # Repeat this track indefinitely
+
+        self._queue = [{
+            "video_id": f"ambience_{ambience_id}",
+            "title": title,
+            "artist": artist,
+            "thumbnail_url": thumbnail_url,
+            "duration": duration
+        }]
+        self._queue_index = 0
+
+        if not self.simulated:
+            self._send_command(["set_property", "pause", False])
+            self._send_command(["set_property", "loop-file", "inf"])
+            self._send_command(["loadfile", str(file_path), "replace"])
+            self._send_command(["set_property", "pause", False])
 
     def play_song(
         self,
@@ -354,6 +397,7 @@ class MPVPlayerService:
                 self._executor.submit(self._queue_related_tracks, video_id)
 
         if not self.simulated:
+            self._send_command(["set_property", "loop-file", "inf" if self.repeat_mode == "one" else "no"])
             self._send_command(["set_property", "pause", False])
             self._send_command(["loadfile", playback_target, "replace"])
             self._send_command(["set_property", "pause", False])

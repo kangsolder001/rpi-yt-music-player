@@ -1,10 +1,11 @@
 import React from 'react';
-import { Compass, ListMusic, Disc3, Volume2 } from 'lucide-react';
+import { Compass, ListMusic, Disc3, Volume2, MoonStar } from 'lucide-react';
 
 interface BottomNavProps {
-  currentView: 'explore' | 'playlist';
+  currentView: 'explore' | 'playlist' | 'ambience';
   onSelectExplore: () => void;
   onSelectPlaylist: () => void;
+  onSelectAmbience: () => void;
   onOpenNowPlaying: () => void;
   onOpenVolumeModal: () => void;
   isPlaying: boolean;
@@ -15,6 +16,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   currentView,
   onSelectExplore,
   onSelectPlaylist,
+  onSelectAmbience,
   onOpenNowPlaying,
   onOpenVolumeModal,
   isPlaying,
@@ -35,7 +37,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <span className="text-[10px] font-medium tracking-tight">Explore</span>
       </button>
 
-      {/* Tab 2: Playlists */}
+      {/* Tab 2: Ambience & Sleep */}
+      <button
+        onClick={onSelectAmbience}
+        className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl transition ${
+          currentView === 'ambience'
+            ? 'text-indigo-400 font-semibold'
+            : 'text-zinc-400 hover:text-zinc-200'
+        }`}
+      >
+        <MoonStar className={`w-5 h-5 ${currentView === 'ambience' ? 'scale-110' : ''} transition-transform`} />
+        <span className="text-[10px] font-medium tracking-tight">Ambience</span>
+      </button>
+
+      {/* Tab 3: Playlists */}
       <button
         onClick={onSelectPlaylist}
         className={`flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-xl transition ${

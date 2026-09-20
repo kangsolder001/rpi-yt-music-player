@@ -1,6 +1,7 @@
 import { PlayerState, SearchResult, TrackInfo, EqualizerState, EqualizerBand, RecommendationResponse, QueueResponse } from '../types/player';
 import { PlaylistDetail, PlaylistSummary, CreatePlaylistInput, AddSongInput, PlaylistSong } from '../types/playlist';
 import { SystemHealthResponse } from '../types/system';
+import { AmbienceSoundscape } from '../types/ambience';
 
 const BASE_URL = '/api';
 
@@ -276,6 +277,21 @@ export const api = {
       const err = await res.json().catch(() => ({ detail: 'Gagal mengimpor playlist YouTube' }));
       throw new Error(err.detail || 'Gagal mengimpor playlist YouTube');
     }
+    return res.json();
+  },
+
+  // --- Ambience & White Noise API ---
+  async getAmbienceCatalog(): Promise<AmbienceSoundscape[]> {
+    const res = await fetch(`${BASE_URL}/ambience/catalog`);
+    if (!res.ok) throw new Error('Failed to fetch ambience catalog');
+    return res.json();
+  },
+
+  async playAmbience(soundscapeId: string): Promise<PlayerState> {
+    const res = await fetch(`${BASE_URL}/ambience/play/${soundscapeId}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to play ambience');
     return res.json();
   }
 };

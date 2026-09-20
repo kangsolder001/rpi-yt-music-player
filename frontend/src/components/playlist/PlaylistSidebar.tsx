@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ListMusic, Trash2, Compass, Radio, Flame, Activity, HardDrive, ListPlus } from 'lucide-react';
+import { Plus, ListMusic, Trash2, Compass, Radio, Flame, Activity, HardDrive, ListPlus, MoonStar } from 'lucide-react';
 import { PlaylistSummary } from '../../types/playlist';
 import { SystemHealthResponse } from '../../types/system';
 import { api } from '../../services/api';
@@ -7,9 +7,10 @@ import { api } from '../../services/api';
 interface PlaylistSidebarProps {
   playlists: PlaylistSummary[];
   selectedPlaylistId: number | null;
-  currentView: 'explore' | 'playlist';
+  currentView: 'explore' | 'playlist' | 'ambience';
   onSelectPlaylist: (id: number) => void;
   onSelectExplore: () => void;
+  onSelectAmbience: () => void;
   onCreatePlaylist: (name: string, description?: string) => Promise<void>;
   onDeletePlaylist: (id: number) => Promise<void>;
   onOpenSystemHealth?: () => void;
@@ -22,6 +23,7 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
   currentView,
   onSelectPlaylist,
   onSelectExplore,
+  onSelectAmbience,
   onCreatePlaylist,
   onDeletePlaylist,
   onOpenSystemHealth,
@@ -67,6 +69,18 @@ export const PlaylistSidebar: React.FC<PlaylistSidebarProps> = ({
             >
               <Compass className="w-4 h-4 text-red-500" />
               <span>Explore & Search</span>
+            </button>
+
+            <button
+              onClick={onSelectAmbience}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
+                currentView === 'ambience'
+                  ? 'bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 shadow-sm'
+                  : 'text-zinc-400 hover:text-indigo-300 hover:bg-zinc-800/50'
+              }`}
+            >
+              <MoonStar className="w-4 h-4 text-indigo-400" />
+              <span>Ambience & Sleep</span>
             </button>
           </nav>
         </div>
