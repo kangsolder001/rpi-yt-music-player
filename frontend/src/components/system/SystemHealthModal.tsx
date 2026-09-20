@@ -11,19 +11,44 @@ import {
   CheckCircle2,
   Flame,
   Zap,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { SystemHealthResponse } from '../../types/system';
+import { PlayerState } from '../../types/player';
 
 interface SystemHealthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onEngineRestarted?: (newState: PlayerState) => void;
 }
 
-export const SystemHealthModal: React.FC<SystemHealthModalProps> = ({ isOpen, onClose }) => {
+export const SystemHealthModal: React.FC<SystemHealthModalProps> = ({ isOpen, onClose, onEngineRestarted }) => {
   const [data, setData] = useState<SystemHealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [isRestartingEngine, setIsRestartingEngine] = useState(false);
+  const [restartSuccessMessage, setRestartSuccessMessage] = useState<string | null>(null);
+
+  const handleRestartEngine = async () => {
+    setIsRestartingEngine(true);
+    setRestartSuccessMessage(null);
+    try {
+      const state = await api.restartEngine();
+      if (onEngineRestarted) {
+        onEngineRestarted(state);
+      }
+      setRestartSuccessMessage('Mesin audio MPV berhasil di-restart & siap digunakan!');
+      setTimeout(() => setRestartSuccessMessage(null), 4000);
+      fetchHealth(false);
+    } catch (err) {
+      console.error('Failed to restart engine:', err);
+      alert('Gagal me-restart mesin audio MPV.');
+    } finally {
+      setIsRestartingEngine(false);
+    }
+  };
 
   const fetchHealth = useCallback(async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
@@ -248,6 +273,38 @@ export const SystemHealthModal: React.FC<SystemHealthModalProps> = ({ isOpen, on
                     IP: <strong className="text-white font-semibold">{data.ip_address}</strong>
                   </span>
                 </div>
+              </div>
+
+              {/* Quick Recovery / Restart Audio Engine */}
+              <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                    <RotateCcw className="w-3.5 h-3.5 text-red-500" />
+                    <span>Pemulihan Cepat Audio</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5">
+                    Jika pemutar audio macet atau tersendat, restart MPV & ALSA tanpa perlu reboot Raspberry Pi.
+                  </div>
+                  {restartSuccessMessage && (
+                    <div className="text-[11px] text-emerald-400 font-medium mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>{restartSuccessMessage}</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleRestartEngine}
+                  disabled={isRestartingEngine}
+                  className="px-3.5 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl text-xs font-semibold border border-red-500/30 transition active:scale-95 shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  title="Restart daemon audio MPV"
+                >
+                  {isRestartingEngine ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isRestartingEngine ? 'Merestart...' : 'Reset Pemutar'}</span>
+                </button>
               </div>
             </>
           ) : (

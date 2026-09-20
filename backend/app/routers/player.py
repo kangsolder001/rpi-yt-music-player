@@ -139,6 +139,13 @@ async def play_queue_index(index: int):
     await ws_manager.broadcast_state()
     return player_service.get_state()
 
+@router.post("/restart-engine", response_model=PlayerState)
+async def restart_player_engine():
+    """Restart MPV daemon cleanly, reinitialize ALSA, and restore playback state."""
+    state = player_service.restart_engine()
+    await ws_manager.broadcast_state()
+    return state
+
 # Equalizer & Audio Enhancer Endpoints
 @router.get("/equalizer")
 def get_equalizer():

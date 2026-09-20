@@ -5,6 +5,7 @@ import socket
 import shutil
 import asyncio
 import logging
+import threading
 import subprocess
 from typing import Optional, Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor
@@ -39,6 +40,16 @@ class MPVPlayerService:
         self._last_play_time: float = 0.0
         self._executor = ThreadPoolExecutor(max_workers=2)
         self._fetching_autoplay: bool = False
+        self._mpv_log_file = None
+
+        # Persistent IPC socket & health watchdog
+        self._ipc_socket: Optional[socket.socket] = None
+        self._ipc_file = None
+        self._ipc_lock = threading.Lock()
+        self._ipc_req_id: int = 0
+        self._consecutive_failures: int = 0
+        self._last_stall_check_time: float = time.time()
+        self._stall_detected_count: int = 0
 
         # Simulation mode fallback
         self.simulated = not bool(self.mpv_bin)
@@ -46,7 +57,7 @@ class MPVPlayerService:
             logger.warning("mpv binary not found on host! Running player in simulated mode.")
 
     def start_mpv_daemon(self):
-        """Ensure mpv process is running with IPC socket enabled."""
+        """Ensure mpv process is running with IPC socket enabled and rock-solid ALSA buffering."""
         if self.simulated:
             return
 
@@ -63,22 +74,40 @@ class MPVPlayerService:
             f"--input-ipc-server={self.socket_path}",
             "--no-video",
             "--ao=alsa",
-            "--volume=100",  # Always keep player volume at max; control volume via ALSA
+            "--audio-buffer=1.0",           # 1000ms buffer to prevent ALSA underruns during Docker I/O spikes
+            "--audio-wait-open=0.5",        # Allow ALSA hardware time to open clean buffers
+            "--audio-format=s16",           # Native 16-bit PCM for bcm2835 headphone DAC
+            "--volume=100",                 # Always keep player volume at max; control volume via ALSA
             "--ytdl-format=bestaudio/best",
             "--ytdl-raw-options=extractor-args=youtube:player_client=android",
+            "--cache=yes",
+            "--demuxer-max-bytes=32MiB",
+            "--demuxer-max-back-bytes=16MiB",
             "--cache-pause-initial=no",
             "--demuxer-lavf-analyzeduration=0.5",
             "--demuxer-lavf-probesize=32768",
             "--gapless-audio=yes",
+            "--term-status-msg=",           # Prevent 10x/sec progress line spam to log file
+            "--msg-level=all=warn,ipc=error",
         ]
 
         if settings.MPV_AUDIO_DEVICE != "auto":
             cmd.append(f"--audio-device={settings.MPV_AUDIO_DEVICE}")
 
         mpv_log_path = settings.DATA_DIR / "mpv.log"
-        self._mpv_log_file = open(mpv_log_path, "a")
+        # Rotate log if exceeds 2MB to protect storage
+        if mpv_log_path.exists():
+            try:
+                if mpv_log_path.stat().st_size > 2 * 1024 * 1024:
+                    backup = mpv_log_path.with_suffix(".log.old")
+                    if backup.exists():
+                        backup.unlink()
+                    mpv_log_path.rename(backup)
+            except Exception as e:
+                logger.warning("Failed rotating mpv.log: %s", e)
 
         try:
+            self._mpv_log_file = open(mpv_log_path, "a")
             self.process = subprocess.Popen(
                 cmd,
                 stdout=self._mpv_log_file,
@@ -91,46 +120,173 @@ class MPVPlayerService:
             logger.error("Failed to start MPV process: %s. Falling back to simulated mode.", e)
             self.simulated = True
 
-    def _send_command(self, cmd: List[Any]) -> Optional[Dict[str, Any]]:
-        """Send JSON command to MPV IPC socket."""
-        if self.simulated:
-            return None
+    def _close_socket(self):
+        """Close persistent IPC socket cleanly."""
+        if self._ipc_file is not None:
+            try:
+                self._ipc_file.close()
+            except Exception:
+                pass
+            self._ipc_file = None
+
+        if self._ipc_socket is not None:
+            try:
+                self._ipc_socket.close()
+            except Exception:
+                pass
+            self._ipc_socket = None
+
+    def _get_socket(self) -> Optional[socket.socket]:
+        """Return persistent UNIX socket connection to MPV IPC or connect a new one."""
+        if self._ipc_socket is not None:
+            return self._ipc_socket
 
         if not os.path.exists(self.socket_path):
             return None
 
         try:
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            client.settimeout(1.5)
+            client.settimeout(2.0)
             client.connect(self.socket_path)
-            payload = json.dumps({"command": cmd}) + "\n"
-            client.sendall(payload.encode("utf-8"))
-            
-            response_data = b""
-            while True:
-                chunk = client.recv(4096)
-                if not chunk:
-                    break
-                response_data += chunk
-                if b"\n" in chunk:
-                    break
-            client.close()
-
-            if response_data:
-                for line in response_data.decode("utf-8", errors="ignore").split("\n"):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        parsed = json.loads(line)
-                        if "error" in parsed or "data" in parsed:
-                            return parsed
-                    except json.JSONDecodeError:
-                        continue
+            self._ipc_socket = client
+            self._ipc_file = client.makefile("r", encoding="utf-8", errors="ignore")
+            return self._ipc_socket
         except Exception as e:
-            logger.debug("MPV IPC send error for %s: %s", cmd, e)
+            logger.debug("Failed connecting to MPV IPC socket (%s): %s", self.socket_path, e)
+            self._close_socket()
+            return None
+
+    def _send_command(self, cmd: List[Any]) -> Optional[Dict[str, Any]]:
+        """Send JSON command to MPV IPC socket using persistent connection with automatic retry."""
+        if self.simulated:
+            return None
+
+        with self._ipc_lock:
+            for attempt in range(2):
+                sock = self._get_socket()
+                if not sock or not self._ipc_file:
+                    continue
+
+                try:
+                    self._ipc_req_id += 1
+                    req_id = self._ipc_req_id
+                    payload = json.dumps({"command": cmd, "request_id": req_id}) + "\n"
+                    sock.sendall(payload.encode("utf-8"))
+
+                    # Read responses line-by-line until matching request_id or command response is found
+                    while True:
+                        line = self._ipc_file.readline()
+                        if not line:
+                            raise ConnectionError("MPV IPC socket connection closed by peer")
+
+                        line = line.strip()
+                        if not line:
+                            continue
+
+                        try:
+                            parsed = json.loads(line)
+                            if parsed.get("request_id") == req_id:
+                                self._consecutive_failures = 0
+                                return parsed
+                            elif "error" in parsed and "event" not in parsed:
+                                self._consecutive_failures = 0
+                                return parsed
+                        except json.JSONDecodeError:
+                            continue
+
+                except Exception as e:
+                    logger.debug("MPV IPC send error on attempt %d for %s: %s", attempt, cmd, e)
+                    self._close_socket()
+                    if attempt == 1:
+                        self._consecutive_failures += 1
+                        if self._consecutive_failures >= 6:
+                            logger.warning("MPV IPC socket failed %d consecutive times! Triggering auto-recovery...", self._consecutive_failures)
+                            self._trigger_watchdog_recovery()
+                        return None
 
         return None
+
+    def restart_engine(self) -> PlayerState:
+        """Cleanly restart MPV daemon, re-initialize ALSA audio, and resume playback without rebooting."""
+        logger.warning("Executing audio engine restart...")
+        was_playing = (not self._is_idle and not self._is_paused)
+        saved_track = self._current_track
+        saved_time = self._current_time
+        saved_playlist_id = self._current_playlist_id
+        saved_queue = list(self._queue)
+        saved_queue_index = self._queue_index
+
+        self._close_socket()
+
+        # Terminate old process
+        if self.process:
+            try:
+                self.process.terminate()
+                self.process.wait(timeout=2.0)
+            except Exception:
+                try:
+                    self.process.kill()
+                except Exception:
+                    pass
+            self.process = None
+
+        # Clean old socket file
+        if os.path.exists(self.socket_path):
+            try:
+                os.remove(self.socket_path)
+            except OSError:
+                pass
+
+        # Close old log file
+        if self._mpv_log_file:
+            try:
+                self._mpv_log_file.close()
+            except Exception:
+                pass
+            self._mpv_log_file = None
+
+        # Start fresh MPV daemon
+        self.start_mpv_daemon()
+        time.sleep(0.4)
+
+        # Re-apply equalizer
+        try:
+            from backend.app.services.equalizer import equalizer_service
+            equalizer_service.apply_to_mpv(self)
+        except Exception as e:
+            logger.error("Failed to re-apply equalizer on restart: %s", e)
+
+        # Restore queue and track info
+        self._queue = saved_queue
+        self._queue_index = saved_queue_index
+        self._current_playlist_id = saved_playlist_id
+        self._consecutive_failures = 0
+        self._stall_detected_count = 0
+
+        if was_playing and saved_track and saved_track.video_id:
+            logger.info("Resuming track '%s' (saved pos: %.1fs) after engine restart", saved_track.title, saved_time)
+            self.play_song(
+                video_id=saved_track.video_id,
+                title=saved_track.title,
+                artist=saved_track.artist,
+                thumbnail_url=saved_track.thumbnail_url,
+                duration=int(saved_track.duration),
+                playlist_id=saved_playlist_id,
+                reset_queue=False
+            )
+            if saved_time > 5.0:
+                time.sleep(0.5)
+                self.seek(saved_time)
+
+        logger.info("Audio engine restart completed successfully.")
+        return self.get_state()
+
+    def _trigger_watchdog_recovery(self):
+        """Called by watchdog when MPV daemon is detected dead or unresponsive."""
+        try:
+            self.restart_engine()
+        except Exception as e:
+            logger.error("Watchdog auto-recovery failed: %s", e)
 
     def set_repeat_mode(self, mode: str):
         """Set repeat mode: 'off', 'all', 'one'."""
@@ -396,7 +552,7 @@ class MPVPlayerService:
             self._send_command(["seek", self._current_time, "absolute"])
 
     def update_status_from_mpv(self):
-        """Query MPV for live playback properties."""
+        """Query MPV for live playback properties and monitor health."""
         if self.simulated:
             # Simulated progress update
             if not self._is_idle and not self._is_paused:
@@ -405,10 +561,18 @@ class MPVPlayerService:
                     self.next_track(force_next=False)
             return
 
+        # Watchdog 1: Check if MPV daemon process terminated unexpectedly
+        if self.process and self.process.poll() is not None:
+            logger.warning("MPV daemon process died (exit code: %s). Auto-restarting...", self.process.poll())
+            self._trigger_watchdog_recovery()
+            return
+
         # Query time-pos
         pos_res = self._send_command(["get_property", "time-pos"])
         if pos_res and "data" in pos_res and isinstance(pos_res["data"], (int, float)):
             self._current_time = float(pos_res["data"])
+            if self._current_time > 0.0:
+                self._stall_detected_count = 0
 
         # Query duration
         dur_res = self._send_command(["get_property", "duration"])
@@ -443,6 +607,25 @@ class MPVPlayerService:
             # Avoid false idle during stream buffering startup
             if not (now_idle and (time.time() - self._last_play_time < 6.0)):
                 self._is_idle = now_idle
+
+        # Watchdog 2: Detect playback stall at 00:00:00 (>15s without advancement)
+        now = time.time()
+        if (
+            not self._is_idle
+            and not self._is_paused
+            and self._current_track
+            and (now - self._last_play_time > 15.0)
+            and self._current_time == 0.0
+            and (now - self._last_stall_check_time > 15.0)
+        ):
+            self._last_stall_check_time = now
+            self._stall_detected_count += 1
+            logger.warning("Playback stalled at 00:00:00 (stall count: %d). Sending unpause...", self._stall_detected_count)
+            self._send_command(["set_property", "pause", False])
+            if self._stall_detected_count >= 2:
+                logger.warning("Playback remained stalled after unpause. Triggering engine recovery...")
+                self._stall_detected_count = 0
+                self._trigger_watchdog_recovery()
 
     def get_state(self) -> PlayerState:
         """Get current player state combined with ALSA volume."""
@@ -496,13 +679,31 @@ class MPVPlayerService:
         )
 
     def shutdown(self):
-        """Terminate MPV daemon."""
+        """Clean shutdown of mpv process and persistent socket."""
+        self._close_socket()
         if self.process and self.process.poll() is None:
-            self.process.terminate()
             try:
+                self.process.terminate()
                 self.process.wait(timeout=2)
             except Exception:
-                self.process.kill()
+                try:
+                    self.process.kill()
+                except Exception:
+                    pass
+        self.process = None
+
+        if os.path.exists(self.socket_path):
+            try:
+                os.remove(self.socket_path)
+            except OSError:
+                pass
+
+        if self._mpv_log_file:
+            try:
+                self._mpv_log_file.close()
+            except Exception:
+                pass
+            self._mpv_log_file = None
 
 player_service = MPVPlayerService()
 

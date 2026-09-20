@@ -492,6 +492,7 @@ export const App: React.FC = () => {
       <SystemHealthModal
         isOpen={isSystemHealthOpen}
         onClose={() => setIsSystemHealthOpen(false)}
+        onEngineRestarted={(newState) => setPlayerState(newState)}
       />
 
       {/* Add To Playlist Modal */}

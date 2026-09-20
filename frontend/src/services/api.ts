@@ -108,6 +108,14 @@ export const api = {
     return res.json();
   },
 
+  async restartEngine(): Promise<PlayerState> {
+    const res = await fetch(`${BASE_URL}/player/restart-engine`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to restart audio engine');
+    return res.json();
+  },
+
   // --- Playlists APIs ---
   async getPlaylists(): Promise<PlaylistSummary[]> {
     const res = await fetch(`${BASE_URL}/playlists`);
