@@ -85,12 +85,18 @@ rpi-yt-music-player/
 Agar proses kompilasi Docker tidak memakan resource dan waktu lama di Raspberry Pi, jalankan script `deploy.sh` dari komputer pengembangan:
 
 ```bash
-# Jalankan deploy ke IP Raspberry Pi (contoh target: myrpi2@192.168.1.111)
-./deploy.sh myrpi2@192.168.1.111
+# 1. Salin file konfigurasi environment
+cp .env.example .env
+
+# 2. Sesuaikan kredensial IP dan password Raspberry Pi di .env
+nano .env
+
+# 3. Jalankan deploy
+./deploy.sh
 ```
 
 Skrip ini akan secara otomatis:
-1. Memeriksa koneksi SSH ke Raspberry Pi.
+1. Memeriksa koneksi SSH ke Raspberry Pi menggunakan kredensial dari `.env`.
 2. Mem-build image multi-arsitektur `linux/arm64` di PC host menggunakan Docker Buildx.
 3. Mengompres dan mentransfer image serta konfigurasi ke Raspberry Pi via SCP.
 4. Me-load image dan menjalankan container via `docker compose up -d` di Raspberry Pi.
@@ -101,9 +107,9 @@ Skrip ini akan secara otomatis:
 Setelah container berjalan, buka browser dari HP, tablet, atau laptop pada alamat:
 
 ```text
-http://192.168.1.111:8000
+http://<IP_RASPBERRY_PI>:8000
 ```
-*(Ganti dengan IP Raspberry Pi Anda jika berbeda)*
+*(Ganti `<IP_RASPBERRY_PI>` dengan alamat IP Raspberry Pi Anda, contoh: `http://192.168.1.100:8000`)*
 
 ---
 

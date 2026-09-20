@@ -13,14 +13,31 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-IMAGE_NAME="rpi-yt-music-player:latest"
+# Determine script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load environment configuration from .env if present
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
+IMAGE_NAME="${IMAGE_NAME:-rpi-yt-music-player:latest}"
 TARGET_PLATFORM="${TARGET_PLATFORM:-linux/arm64}"
 REMOTE_DIR="${REMOTE_DIR:-~/rpi-yt-music-player}"
 TEMP_TAR="/tmp/rpi-yt-music-player.tar.gz"
 
-# Default credentials if not overridden
-PI_TARGET="${1:-myrpi2@192.168.1.111}"
-PI_PASS="${PI_PASS:-nomoredota}"
+# Raspberry Pi target: argument 1 > .env PI_TARGET
+PI_TARGET="${1:-$PI_TARGET}"
+PI_PASS="${PI_PASS:-}"
+
+if [ -z "$PI_TARGET" ]; then
+  echo -e "${RED}[ERROR] Target Raspberry Pi belum ditentukan!${NC}"
+  echo -e "Silakan atur PI_TARGET di file .env (lihat .env.example) atau tentukan lewat argumen:"
+  echo -e "  Contoh: ${YELLOW}./deploy.sh user@192.168.1.100${NC}\n"
+  exit 1
+fi
 
 echo -e "${BLUE}=====================================================${NC}"
 echo -e "${GREEN}   Raspberry Pi 4 YouTube Music Player Deployer      ${NC}"
@@ -85,15 +102,23 @@ echo -e "${GREEN}✓ File berhasil ditransfer!${NC}"
 
 # 5. Load and Run on Raspberry Pi
 echo -e "\n${BLUE}[5/5] Memuat image dan menjalankan container di Raspberry Pi...${NC}"
-run_ssh "bash -s" << 'EOF'
+run_ssh "bash -s -- \"$PI_PASS\" \"$REMOTE_DIR\"" << 'EOF'
   set -e
-  cd ~/rpi-yt-music-player
+  REMOTE_PASS="$1"
+  DEPLOY_DIR="${2:-~/rpi-yt-music-player}"
+  DEPLOY_DIR="${DEPLOY_DIR/#\~/$HOME}"
+
+  cd "$DEPLOY_DIR"
   echo "-> Loading Docker image..."
   docker load < rpi-image.tar.gz
   rm -f rpi-image.tar.gz
 
   echo "-> Memastikan service docker berjalan & user group audio..."
-  echo nomoredota | sudo -S usermod -aG audio,docker $USER 2>/dev/null || true
+  if [ -n "$REMOTE_PASS" ]; then
+    echo "$REMOTE_PASS" | sudo -S usermod -aG audio,docker "$USER" 2>/dev/null || true
+  else
+    sudo -n usermod -aG audio,docker "$USER" 2>/dev/null || true
+  fi
 
   echo "-> Menjalankan container..."
   docker compose down 2>/dev/null || docker-compose down 2>/dev/null || true
