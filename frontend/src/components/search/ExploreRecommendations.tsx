@@ -5,12 +5,14 @@ import { api } from '../../services/api';
 
 interface ExploreRecommendationsProps {
   currentVideoId?: string | null;
+  loadingVideoId?: string | null;
   onPlaySong: (song: SearchResult) => void;
   onAddToPlaylist: (song: SearchResult) => void;
 }
 
 export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
   currentVideoId,
+  loadingVideoId,
   onPlaySong,
   onAddToPlaylist,
 }) => {
@@ -163,12 +165,13 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {songs.map((song, index) => {
             const isPlaying = currentVideoId === song.video_id;
+            const isLoadingSong = loadingVideoId === song.video_id;
             return (
               <div
                 key={song.video_id}
                 onClick={() => onPlaySong(song)}
                 className={`flex items-center justify-between p-3 rounded-2xl border transition cursor-pointer select-none gap-3 group active:scale-[0.99] ${
-                  isPlaying
+                  isPlaying || isLoadingSong
                     ? 'bg-zinc-900 border-red-500/80 shadow-md shadow-red-950/40 text-red-400'
                     : 'bg-zinc-900/60 hover:bg-zinc-900 border-zinc-800/80 hover:border-zinc-700 text-zinc-200'
                 }`}
@@ -186,11 +189,13 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
                       <Music className="w-5 h-5 text-zinc-500" />
                     )}
 
-                    {/* Play hover overlay */}
+                    {/* Play hover / loading overlay */}
                     <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
-                      isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      isPlaying || isLoadingSong ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                     }`}>
-                      {isPlaying ? (
+                      {isLoadingSong ? (
+                        <Loader2 className="w-6 h-6 text-red-400 animate-spin" />
+                      ) : isPlaying ? (
                         <Disc3 className="w-6 h-6 text-white animate-spin" />
                       ) : (
                         <Play className="w-5 h-5 text-white fill-current ml-0.5" />
@@ -200,7 +205,7 @@ export const ExploreRecommendations: React.FC<ExploreRecommendationsProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <h4 className={`font-semibold text-sm truncate leading-snug ${
-                      isPlaying ? 'text-red-400' : 'text-zinc-100 group-hover:text-white'
+                      isPlaying || isLoadingSong ? 'text-red-400' : 'text-zinc-100 group-hover:text-white'
                     }`}>
                       {song.title}
                     </h4>

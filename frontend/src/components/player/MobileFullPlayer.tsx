@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   ListMusic,
+  Loader2,
 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { api } from '../../services/api';
@@ -51,6 +52,7 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
   const duration = playerState.duration || 0;
   const currentTime = playerState.current_time || 0;
   const volume = playerState.volume;
+  const isBuffering = isPlaying && currentTime === 0;
 
   const formatTime = (seconds: number): string => {
     if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -184,8 +186,17 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
           )}
 
           {isPlaying && (
-            <div className="absolute inset-0 bg-black/25 flex items-center justify-center pointer-events-none">
-              <Disc3 className="w-16 h-16 text-white/70 animate-spin" />
+            <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none">
+              {isBuffering ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="w-14 h-14 text-red-500 animate-spin" />
+                  <span className="text-xs font-semibold text-white bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm animate-pulse border border-zinc-800">
+                    Memuat audio...
+                  </span>
+                </div>
+              ) : (
+                <Disc3 className="w-16 h-16 text-white/70 animate-spin" />
+              )}
             </div>
           )}
         </div>
@@ -203,7 +214,13 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
             </p>
           </div>
           {currentTrack && (
-            <div className="shrink-0 pt-1">
+            <div className="shrink-0 pt-1 flex items-center gap-1.5">
+              {isBuffering && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-950/90 border border-red-800 text-[11px] font-medium text-red-300 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin text-red-400" />
+                  <span>Buffering</span>
+                </span>
+              )}
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-800/80 border border-zinc-700/50 text-[11px] text-zinc-300">
                 <Radio className="w-3 h-3 text-red-500" />
                 <span>ALSA PCM</span>

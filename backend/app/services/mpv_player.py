@@ -15,6 +15,7 @@ from backend.app.schemas import PlayerState, TrackInfo
 from backend.app.services.audio_mixer import audio_mixer
 from backend.app.services.downloader import downloader_service
 from backend.app.services.ytmusic import ytmusic_service
+from backend.app.services.stream_resolver import stream_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +75,7 @@ class MPVPlayerService:
             f"--input-ipc-server={self.socket_path}",
             "--no-video",
             "--ao=alsa",
-            "--audio-buffer=1.0",           # 1000ms buffer to prevent ALSA underruns during Docker I/O spikes
-            "--audio-wait-open=0.5",        # Allow ALSA hardware time to open clean buffers
+            "--audio-buffer=0.5",           # 500ms buffer (safe against ALSA underruns, 2x faster than 1s)
             "--audio-format=s16",           # Native 16-bit PCM for bcm2835 headphone DAC
             "--volume=100",                 # Always keep player volume at max; control volume via ALSA
             "--ytdl-format=bestaudio/best",
@@ -84,7 +84,7 @@ class MPVPlayerService:
             "--demuxer-max-bytes=32MiB",
             "--demuxer-max-back-bytes=16MiB",
             "--cache-pause-initial=no",
-            "--demuxer-lavf-analyzeduration=0.5",
+            "--demuxer-lavf-analyzeduration=0.1",
             "--demuxer-lavf-probesize=32768",
             "--gapless-audio=yes",
             "--term-status-msg=",           # Prevent 10x/sec progress line spam to log file
@@ -315,8 +315,14 @@ class MPVPlayerService:
             playback_target = local_file
             logger.info("Playing offline (local file): %s (%s)", title, local_file)
         else:
-            playback_target = f"https://www.youtube.com/watch?v={video_id}"
-            logger.info("Streaming from YouTube: %s (%s)", title, video_id)
+            # High-performance direct stream resolution with memory cache
+            direct_url = stream_resolver.resolve_stream_url(video_id)
+            if direct_url:
+                playback_target = direct_url
+                logger.info("Playing direct stream: %s (%s)", title, video_id)
+            else:
+                playback_target = f"https://www.youtube.com/watch?v={video_id}"
+                logger.info("Streaming from YouTube (ytdl fallback): %s (%s)", title, video_id)
 
         self._current_track = TrackInfo(
             video_id=video_id,
@@ -351,6 +357,13 @@ class MPVPlayerService:
             self._send_command(["loadfile", playback_target, "replace"])
             self._send_command(["set_property", "pause", False])
 
+        # Background prefetch the next track in queue if available
+        next_idx = self._queue_index + 1
+        if self._queue and next_idx < len(self._queue):
+            next_track_info = self._queue[next_idx]
+            if next_track_info and "video_id" in next_track_info:
+                stream_resolver.prefetch(next_track_info["video_id"])
+
     def _queue_related_tracks(self, seed_video_id: str):
         """Fetch similar recommended tracks and append to radio queue."""
         if self._fetching_autoplay:
@@ -378,6 +391,9 @@ class MPVPlayerService:
             if new_tracks:
                 self._queue.extend(new_tracks)
                 logger.info("Appended %d related autoplay tracks to queue (Total: %d)", len(new_tracks), len(self._queue))
+                # Prefetch first autoplay track in queue
+                if len(self._queue) > self._queue_index + 1:
+                    stream_resolver.prefetch(self._queue[self._queue_index + 1]["video_id"])
         except Exception as e:
             logger.error("Failed to fetch related autoplay tracks: %s", e)
         finally:
@@ -402,6 +418,10 @@ class MPVPlayerService:
             playlist_id=playlist_id,
             reset_queue=False
         )
+
+        # Prefetch the next track in playlist
+        if len(self._queue) > self._queue_index + 1:
+            stream_resolver.prefetch(self._queue[self._queue_index + 1]["video_id"])
 
     def pause(self):
         """Pause playback."""

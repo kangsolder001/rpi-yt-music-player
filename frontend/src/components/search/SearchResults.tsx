@@ -8,6 +8,7 @@ interface SearchResultsProps {
   onAddToPlaylist: (song: SearchResult) => void;
   onClearSearch?: () => void;
   currentVideoId?: string | null;
+  loadingVideoId?: string | null;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
@@ -19,6 +20,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onAddToPlaylist,
   onClearSearch,
   currentVideoId,
+  loadingVideoId,
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
@@ -75,19 +77,22 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       <div className="divide-y divide-zinc-800/40">
         {results.map((song, idx) => {
           const isPlaying = currentVideoId === song.video_id;
+          const isLoadingSong = loadingVideoId === song.video_id;
           return (
             <div
               key={song.video_id}
               onClick={() => onPlaySong(song)}
               className={`flex items-center justify-between px-3 py-2.5 rounded-2xl hover:bg-zinc-800/60 active:bg-zinc-800 transition cursor-pointer select-none gap-3 group ${
-                isPlaying ? 'bg-zinc-800/80 text-red-400' : 'text-zinc-200'
+                isPlaying || isLoadingSong ? 'bg-zinc-800/80 text-red-400' : 'text-zinc-200'
               }`}
             >
               {/* Left: Index + Thumbnail + Details */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 {/* Index / Play icon */}
-                <div className="w-5 text-center text-xs font-mono shrink-0">
-                  {isPlaying ? (
+                <div className="w-5 text-center text-xs font-mono shrink-0 flex items-center justify-center">
+                  {isLoadingSong ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-red-400" />
+                  ) : isPlaying ? (
                     <span className="text-red-500 font-bold animate-pulse">▶</span>
                   ) : (
                     <>
@@ -108,11 +113,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   ) : (
                     <Music className="w-5 h-5 text-zinc-500" />
                   )}
+                  {isLoadingSong && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-red-400 animate-spin" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Title & Artist */}
                 <div className="min-w-0 flex-1 pr-1">
-                  <div className={`font-semibold text-sm truncate ${isPlaying ? 'text-red-400' : 'text-zinc-100'}`}>
+                  <div className={`font-semibold text-sm truncate ${isPlaying || isLoadingSong ? 'text-red-400' : 'text-zinc-100'}`}>
                     {song.title}
                   </div>
                   <div className="text-xs text-zinc-400 truncate mt-0.5 flex items-center gap-2">

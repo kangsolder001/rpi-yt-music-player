@@ -63,6 +63,7 @@ export const App: React.FC = () => {
   // Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<SearchResult | null>(null);
+  const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
 
   // Initial load & WebSocket subscription
   useEffect(() => {
@@ -173,6 +174,24 @@ export const App: React.FC = () => {
   };
 
   const handlePlaySongFromSearch = async (song: SearchResult) => {
+    setLoadingTrackId(song.video_id);
+    // Optimistic UI update: immediately display song details and buffering state
+    setPlayerState((prev) => ({
+      ...prev,
+      is_playing: true,
+      is_paused: false,
+      is_idle: false,
+      current_time: 0,
+      duration: song.duration || 0,
+      current_track: {
+        video_id: song.video_id,
+        title: song.title,
+        artist: song.artist,
+        thumbnail_url: song.thumbnail_url,
+        duration: song.duration,
+      },
+    }));
+
     try {
       const state = await api.playSong({
         video_id: song.video_id,
@@ -183,7 +202,9 @@ export const App: React.FC = () => {
       });
       setPlayerState(state);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to play song:', e);
+    } finally {
+      setLoadingTrackId(null);
     }
   };
 
@@ -200,11 +221,33 @@ export const App: React.FC = () => {
 
   const handlePlaySongInPlaylist = async (startIndex: number) => {
     if (!selectedPlaylistId) return;
+    if (currentPlaylistDetail && currentPlaylistDetail.songs[startIndex]) {
+      const target = currentPlaylistDetail.songs[startIndex];
+      setLoadingTrackId(target.video_id);
+      setPlayerState((prev) => ({
+        ...prev,
+        is_playing: true,
+        is_paused: false,
+        is_idle: false,
+        current_time: 0,
+        duration: target.duration || 0,
+        current_track: {
+          video_id: target.video_id,
+          title: target.title,
+          artist: target.artist,
+          thumbnail_url: target.thumbnail_url,
+          duration: target.duration,
+        },
+      }));
+    }
+
     try {
       const state = await api.playPlaylist(selectedPlaylistId, startIndex);
       setPlayerState(state);
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoadingTrackId(null);
     }
   };
 
@@ -356,6 +399,7 @@ export const App: React.FC = () => {
                 <SearchResults
                   results={searchResults}
                   currentVideoId={playerState.current_track?.video_id}
+                  loadingVideoId={loadingTrackId}
                   onPlaySong={handlePlaySongFromSearch}
                   onAddToPlaylist={(song) => {
                     setSongToAddToPlaylist(song);
@@ -372,6 +416,7 @@ export const App: React.FC = () => {
               ) : (
                 <ExploreRecommendations
                   currentVideoId={playerState.current_track?.video_id}
+                  loadingVideoId={loadingTrackId}
                   onPlaySong={handlePlaySongFromSearch}
                   onAddToPlaylist={(song) => {
                     setSongToAddToPlaylist(song);

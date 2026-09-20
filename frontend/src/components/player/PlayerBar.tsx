@@ -1,4 +1,4 @@
-import { Music, Disc3, SlidersHorizontal, ListMusic } from 'lucide-react';
+import { Music, Disc3, SlidersHorizontal, ListMusic, Loader2 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { Controls } from './Controls';
 import { ProgressBar } from './ProgressBar';
@@ -14,6 +14,7 @@ interface PlayerBarProps {
 export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer, onOpenVolume, onOpenQueue }) => {
   const currentTrack = playerState.current_track;
   const hasTrack = Boolean(currentTrack && currentTrack.video_id);
+  const isBuffering = playerState.is_playing && playerState.current_time === 0;
 
   return (
     <footer className="hidden md:flex h-20 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md px-6 items-center justify-between gap-4 shrink-0 z-30 shadow-2xl">
@@ -30,15 +31,27 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualiz
             <Music className="w-5 h-5 text-zinc-500" />
           )}
           {playerState.is_playing && (
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-              <Disc3 className="w-6 h-6 text-white/80 animate-spin" />
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+              {isBuffering ? (
+                <Loader2 className="w-6 h-6 text-red-400 animate-spin" />
+              ) : (
+                <Disc3 className="w-6 h-6 text-white/80 animate-spin" />
+              )}
             </div>
           )}
         </div>
 
         <div className="truncate flex-1">
-          <div className="font-semibold text-sm text-zinc-100 truncate">
-            {currentTrack?.title || 'No Track Playing'}
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-zinc-100 truncate">
+              {currentTrack?.title || 'No Track Playing'}
+            </span>
+            {isBuffering && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-950/80 border border-red-800/80 text-[10px] font-medium text-red-300 animate-pulse shrink-0">
+                <Loader2 className="w-2.5 h-2.5 animate-spin text-red-400" />
+                <span>Memuat...</span>
+              </span>
+            )}
           </div>
           <div className="text-xs text-zinc-400 truncate mt-0.5">
             {currentTrack?.artist || 'Select a song or playlist'}

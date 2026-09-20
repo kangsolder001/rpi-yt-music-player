@@ -1,5 +1,5 @@
 import React from 'react';
-import { Music, Play, Pause, SkipForward, Disc3, Volume2 } from 'lucide-react';
+import { Music, Play, Pause, SkipForward, Disc3, Volume2, Loader2 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { api } from '../../services/api';
 
@@ -16,6 +16,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const isPlaying = playerState.is_playing;
   const duration = playerState.duration || 0;
   const currentTime = playerState.current_time || 0;
+  const isBuffering = isPlaying && currentTime === 0;
 
   if (!currentTrack && playerState.is_idle) {
     return null;
@@ -61,7 +62,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             )}
             {isPlaying && (
               <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <Disc3 className="w-5 h-5 text-white animate-spin" />
+                {isBuffering ? (
+                  <Loader2 className="w-5 h-5 text-red-400 animate-spin" />
+                ) : (
+                  <Disc3 className="w-5 h-5 text-white animate-spin" />
+                )}
               </div>
             )}
           </div>
@@ -71,7 +76,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               {currentTrack?.title || 'Tidak Ada Lagu'}
             </div>
             <div className="text-[11px] text-zinc-400 truncate mt-0.5 flex items-center gap-1.5">
-              <span>{currentTrack?.artist || 'YouTube Music'}</span>
+              {isBuffering ? (
+                <span className="text-red-400 font-medium animate-pulse flex items-center gap-1">
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  <span>Memuat audio...</span>
+                </span>
+              ) : (
+                <span>{currentTrack?.artist || 'YouTube Music'}</span>
+              )}
               <span className="text-zinc-600">•</span>
               <span className="text-emerald-400 font-mono text-[10px]">{playerState.volume}%</span>
             </div>
