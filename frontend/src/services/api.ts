@@ -116,6 +116,30 @@ export const api = {
     return res.json();
   },
 
+  async setSleepTimer(durationMinutes: number, fadeOutSeconds: number = 60): Promise<PlayerState> {
+    const res = await fetch(`${BASE_URL}/player/sleep-timer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ duration_minutes: durationMinutes, fade_out_seconds: fadeOutSeconds }),
+    });
+    if (!res.ok) throw new Error('Failed to set sleep timer');
+    return res.json();
+  },
+
+  async getSleepTimer(): Promise<{ is_active: boolean; remaining_seconds: number | null }> {
+    const res = await fetch(`${BASE_URL}/player/sleep-timer`);
+    if (!res.ok) throw new Error('Failed to get sleep timer status');
+    return res.json();
+  },
+
+  async cancelSleepTimer(): Promise<PlayerState> {
+    const res = await fetch(`${BASE_URL}/player/sleep-timer`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to cancel sleep timer');
+    return res.json();
+  },
+
   // --- Playlists APIs ---
   async getPlaylists(): Promise<PlaylistSummary[]> {
     const res = await fetch(`${BASE_URL}/playlists`);

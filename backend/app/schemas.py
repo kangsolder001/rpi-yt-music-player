@@ -73,6 +73,8 @@ class PlayerState(BaseModel):
     current_track: Optional[TrackInfo] = None
     playlist_id: Optional[int] = None
     queue_length: int = 0
+    is_sleep_timer_active: bool = False
+    sleep_timer_remaining: Optional[int] = None
 
 class PlaySongRequest(BaseModel):
     video_id: str
@@ -92,6 +94,14 @@ class RepeatRequest(BaseModel):
 
 class AutoplayRequest(BaseModel):
     enabled: bool
+
+class SleepTimerRequest(BaseModel):
+    duration_minutes: int = Field(..., ge=1, le=720)
+    fade_out_seconds: Optional[int] = Field(60, ge=0, le=300)
+
+class SleepTimerResponse(BaseModel):
+    is_active: bool
+    remaining_seconds: Optional[int] = None
 
 # --- Search Schemas ---
 class SearchResultItem(BaseModel):

@@ -4,11 +4,13 @@ from backend.app.database import get_db
 from backend.app.models import Playlist, PlaylistSong
 from backend.app.schemas import (
     PlayerState, PlaySongRequest, VolumeRequest, SeekRequest, RepeatRequest,
-    AutoplayRequest, QueueResponse, EqualizerUpdateRequest, EqualizerPresetRequest
+    AutoplayRequest, QueueResponse, EqualizerUpdateRequest, EqualizerPresetRequest,
+    SleepTimerRequest, SleepTimerResponse
 )
 from backend.app.services.mpv_player import player_service
 from backend.app.services.audio_mixer import audio_mixer
 from backend.app.services.equalizer import equalizer_service
+from backend.app.services.sleep_timer import sleep_timer_service
 from backend.app.websocket import ws_manager
 
 router = APIRouter(prefix="/api/player", tags=["player"])
@@ -170,6 +172,30 @@ def set_equalizer_preset(req: EqualizerPresetRequest):
         return equalizer_service.set_preset(req.preset, player_service)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# Sleep Timer Endpoints
+@router.post("/sleep-timer", response_model=PlayerState)
+async def set_sleep_timer(req: SleepTimerRequest):
+    """Start sleep timer with duration in minutes and smooth volume fade-out."""
+    sleep_timer_service.start_timer(
+        minutes=req.duration_minutes,
+        fade_out_seconds=req.fade_out_seconds or 60
+    )
+    await ws_manager.broadcast_state()
+    return player_service.get_state()
+
+@router.get("/sleep-timer", response_model=SleepTimerResponse)
+def get_sleep_timer():
+    """Get active sleep timer status and remaining countdown seconds."""
+    is_active, remaining = sleep_timer_service.get_status()
+    return SleepTimerResponse(is_active=is_active, remaining_seconds=remaining)
+
+@router.delete("/sleep-timer", response_model=PlayerState)
+async def cancel_sleep_timer():
+    """Cancel active sleep timer and restore original volume."""
+    sleep_timer_service.cancel_timer()
+    await ws_manager.broadcast_state()
+    return player_service.get_state()
 
 # WebSocket Endpoint
 @router.websocket("/ws")

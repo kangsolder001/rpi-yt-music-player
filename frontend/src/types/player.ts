@@ -18,6 +18,8 @@ export interface PlayerState {
   current_track: TrackInfo | null;
   playlist_id?: number | null;
   queue_length: number;
+  is_sleep_timer_active?: boolean;
+  sleep_timer_remaining?: number | null;
 }
 
 export interface SearchResult {

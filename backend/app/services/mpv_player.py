@@ -16,6 +16,7 @@ from backend.app.services.audio_mixer import audio_mixer
 from backend.app.services.downloader import downloader_service
 from backend.app.services.ytmusic import ytmusic_service
 from backend.app.services.stream_resolver import stream_resolver
+from backend.app.services.sleep_timer import sleep_timer_service
 
 logger = logging.getLogger(__name__)
 
@@ -648,7 +649,8 @@ class MPVPlayerService:
                 self._trigger_watchdog_recovery()
 
     def get_state(self) -> PlayerState:
-        """Get current player state combined with ALSA volume."""
+        """Get current player state combined with ALSA volume and sleep timer."""
+        timer_active, timer_remaining = sleep_timer_service.get_status()
         return PlayerState(
             is_playing=(not self._is_idle and not self._is_paused),
             is_paused=self._is_paused,
@@ -660,7 +662,9 @@ class MPVPlayerService:
             autoplay=self.autoplay,
             current_track=self._current_track,
             playlist_id=self._current_playlist_id,
-            queue_length=len(self._queue)
+            queue_length=len(self._queue),
+            is_sleep_timer_active=timer_active,
+            sleep_timer_remaining=timer_remaining
         )
 
     def get_queue(self) -> Dict[str, Any]:

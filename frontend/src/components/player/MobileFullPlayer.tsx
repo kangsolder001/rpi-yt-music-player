@@ -20,6 +20,7 @@ import {
   Sparkles,
   ListMusic,
   Loader2,
+  Moon,
 } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { api } from '../../services/api';
@@ -32,6 +33,7 @@ interface MobileFullPlayerProps {
   onOpenEqualizer?: () => void;
   onOpenQueue?: () => void;
   onOpenSystemHealth?: () => void;
+  onOpenSleepTimer?: () => void;
 }
 
 export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
@@ -42,6 +44,7 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
   onOpenEqualizer,
   onOpenQueue,
   onOpenSystemHealth,
+  onOpenSleepTimer,
 }) => {
   if (!isOpen) return null;
 
@@ -145,6 +148,25 @@ export const MobileFullPlayer: React.FC<MobileFullPlayerProps> = ({
               {playerState.queue_length > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center">
                   {playerState.queue_length}
+                </span>
+              )}
+            </button>
+          )}
+
+          {onOpenSleepTimer && (
+            <button
+              onClick={onOpenSleepTimer}
+              className={`relative p-2 rounded-full active:scale-95 transition ${
+                playerState.is_sleep_timer_active
+                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                  : 'text-zinc-400 hover:text-white bg-zinc-800/40'
+              }`}
+              title="Mode Tidur (Sleep Timer)"
+            >
+              <Moon className={`w-5 h-5 ${playerState.is_sleep_timer_active ? 'fill-current text-indigo-400' : ''}`} />
+              {playerState.is_sleep_timer_active && playerState.sleep_timer_remaining !== null && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center font-mono">
+                  {Math.ceil((playerState.sleep_timer_remaining ?? 0) / 60)}m
                 </span>
               )}
             </button>

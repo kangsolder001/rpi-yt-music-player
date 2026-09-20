@@ -20,6 +20,7 @@ import { MobileVolumeModal } from './components/player/MobileVolumeModal';
 import { EqualizerModal } from './components/player/EqualizerModal';
 import { QueueModal } from './components/player/QueueModal';
 import { SystemHealthModal } from './components/system/SystemHealthModal';
+import { SleepTimerModal } from './components/player/SleepTimerModal';
 import { BottomNav } from './components/navigation/BottomNav';
 
 export const App: React.FC = () => {
@@ -45,6 +46,7 @@ export const App: React.FC = () => {
   const [isMobileVolumeOpen, setIsMobileVolumeOpen] = useState(false);
   const [isEqualizerOpen, setIsEqualizerOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [isSleepTimerOpen, setIsSleepTimerOpen] = useState(false);
   const [isSystemHealthOpen, setIsSystemHealthOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
@@ -470,6 +472,7 @@ export const App: React.FC = () => {
         onOpenEqualizer={() => setIsEqualizerOpen(true)}
         onOpenVolume={() => setIsMobileVolumeOpen(true)}
         onOpenQueue={() => setIsQueueOpen(true)}
+        onOpenSleepTimer={() => setIsSleepTimerOpen(true)}
       />
 
       {/* Mobile Floating Mini Player (Visible above BottomNav when track exists) */}
@@ -498,6 +501,7 @@ export const App: React.FC = () => {
         playerState={playerState}
         onOpenEqualizer={() => setIsEqualizerOpen(true)}
         onOpenQueue={() => setIsQueueOpen(true)}
+        onOpenSleepTimer={() => setIsSleepTimerOpen(true)}
         onOpenSystemHealth={() => setIsSystemHealthOpen(true)}
         onAddToPlaylist={() => {
           if (playerState.current_track?.video_id) {
@@ -538,6 +542,14 @@ export const App: React.FC = () => {
         isOpen={isSystemHealthOpen}
         onClose={() => setIsSystemHealthOpen(false)}
         onEngineRestarted={(newState) => setPlayerState(newState)}
+      />
+
+      {/* Quick Sleep Timer Modal */}
+      <SleepTimerModal
+        isOpen={isSleepTimerOpen}
+        onClose={() => setIsSleepTimerOpen(false)}
+        playerState={playerState}
+        onTimerChanged={(newState) => setPlayerState(newState)}
       />
 
       {/* Add To Playlist Modal */}

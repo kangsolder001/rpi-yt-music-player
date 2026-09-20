@@ -1,4 +1,4 @@
-import { Music, Disc3, SlidersHorizontal, ListMusic, Loader2 } from 'lucide-react';
+import { Music, Disc3, SlidersHorizontal, ListMusic, Loader2, Moon } from 'lucide-react';
 import { PlayerState } from '../../types/player';
 import { Controls } from './Controls';
 import { ProgressBar } from './ProgressBar';
@@ -9,9 +9,16 @@ interface PlayerBarProps {
   onOpenEqualizer?: () => void;
   onOpenVolume?: () => void;
   onOpenQueue?: () => void;
+  onOpenSleepTimer?: () => void;
 }
 
-export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualizer, onOpenVolume, onOpenQueue }) => {
+export const PlayerBar: React.FC<PlayerBarProps> = ({
+  playerState,
+  onOpenEqualizer,
+  onOpenVolume,
+  onOpenQueue,
+  onOpenSleepTimer,
+}) => {
   const currentTrack = playerState.current_track;
   const hasTrack = Boolean(currentTrack && currentTrack.video_id);
   const isBuffering = playerState.is_playing && playerState.current_time === 0;
@@ -88,6 +95,28 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ playerState, onOpenEqualiz
             {playerState.queue_length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center leading-none">
                 {playerState.queue_length}
+              </span>
+            )}
+          </button>
+        )}
+        {onOpenSleepTimer && (
+          <button
+            onClick={onOpenSleepTimer}
+            className={`relative p-2 rounded-xl transition active:scale-95 flex items-center gap-1.5 ${
+              playerState.is_sleep_timer_active
+                ? 'bg-indigo-600/25 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-600/40 shadow-sm shadow-indigo-950'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+            title={
+              playerState.is_sleep_timer_active
+                ? `Sleep Timer Aktif (${Math.ceil((playerState.sleep_timer_remaining ?? 0) / 60)} menit tersisa)`
+                : 'Mode Tidur (Sleep Timer)'
+            }
+          >
+            <Moon className={`w-4 h-4 ${playerState.is_sleep_timer_active ? 'fill-current text-indigo-400' : ''}`} />
+            {playerState.is_sleep_timer_active && playerState.sleep_timer_remaining !== null && (
+              <span className="text-[10px] font-bold font-mono text-indigo-200 leading-none">
+                {Math.ceil((playerState.sleep_timer_remaining ?? 0) / 60)}m
               </span>
             )}
           </button>
